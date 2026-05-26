@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HW4 · DRL & Agentic AI Survey (2024–2026) — Live Demo</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent2: #a78bfa;
+      --warning: #f59e0b;
+      --good: #22c55e;
+      --bad: #f43f5e;
+      --border: #334155;
+      --code-bg: #0b1220;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      padding: 2.5rem 1.25rem 4rem;
+      font-family: "Segoe UI", "Microsoft JhengHei", "PingFang TC", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+    }
+    main { max-width: 1060px; margin: 0 auto; }
+    h1 { font-size: 2rem; margin-top: 0; color: var(--text); }
+    h2 {
+      margin-top: 2.4rem; font-size: 1.3rem; color: var(--accent);
+      border-left: 4px solid var(--accent); padding-left: 0.7rem;
+    }
+    h3 { margin-top: 1.6rem; font-size: 1.05rem; color: var(--text); }
+    p { color: var(--muted); }
+    .tagline { font-size: 1.05rem; color: var(--text); margin-bottom: 0.25rem; }
+    .meta { font-size: 0.9rem; color: var(--muted); margin-bottom: 2rem; }
+    .panel {
+      background: var(--panel);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin: 1rem 0;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+    }
+    .grid2 { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+    .grid3 { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+    @media (min-width: 780px) {
+      .grid2 { grid-template-columns: 1fr 1fr; }
+      .grid3 { grid-template-columns: 1fr 1fr 1fr; }
+    }
+    figure { margin: 0; }
+    figure img { display: block; width: 100%; height: auto; border-radius: 8px; background: white; }
+    figcaption { font-size: 0.85rem; color: var(--muted); margin-top: 0.4rem; text-align: center; }
+    a { color: var(--accent); }
+    a:hover { color: var(--accent2); }
+    table { border-collapse: collapse; width: 100%; font-size: 0.92rem; margin: 1em 0; }
+    th, td { border: 1px solid var(--border); padding: 8px 10px; vertical-align: top; text-align: left; }
+    th { background: #0b1220; color: var(--text); }
+    code, pre { font-family: "Fira Code", "Consolas", "Menlo", monospace; }
+    code { background: var(--code-bg); padding: 0.12em 0.4em; border-radius: 3px; font-size: 0.92em; color: #facc15; }
+    pre {
+      background: var(--code-bg); padding: 1em 1.2em; border-radius: 8px;
+      overflow-x: auto; font-size: 0.85rem; line-height: 1.45; border-left: 3px solid var(--accent2);
+    }
+    pre code { background: transparent; padding: 0; color: var(--text); }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.8em; font-weight: 600; }
+    .badge-good { background: #14532d; color: #86efac; }
+    .badge-warn { background: #422006; color: #fde68a; }
+    .badge-accent { background: #082f49; color: #7dd3fc; }
+    .navbar {
+      background: var(--panel); padding: 0.7em 1em; border-radius: 8px;
+      margin-bottom: 1.5rem; font-size: 0.92em;
+    }
+    .navbar a { margin-right: 1em; text-decoration: none; }
+    blockquote {
+      border-left: 4px solid var(--accent);
+      padding: 0.6em 1em;
+      margin: 1em 0;
+      background: var(--code-bg);
+      border-radius: 0 8px 8px 0;
+      color: var(--text);
+    }
+    .stat {
+      display: inline-block; padding: 0.4em 0.9em; margin: 0.2em 0.4em 0.2em 0;
+      background: var(--code-bg); border-radius: 6px; color: var(--text);
+      font-size: 0.92em; border: 1px solid var(--border);
+    }
+    .stat strong { color: var(--accent); }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2.5em 0; }
+    .footer { color: var(--muted); font-size: 0.85em; text-align: center; margin-top: 4em; }
+  </style>
+</head>
+<body>
+<main>
+
+<h1>HW4 · DRL & Agentic AI Survey <span class="badge badge-accent">2024 – 2026</span></h1>
+<p class="tagline">Deep Reinforcement Learning · Foundation Models · Agentic AI · Embodied Robotics · AI for Science</p>
+<p class="meta">DRL Course Homework 4 — Literature Survey + 2 Hands-On MVPs · 11,575 words · 100+ references</p>
+
+<nav class="navbar">
+  <a href="#overview">Overview</a>
+  <a href="#parts">Report Parts</a>
+  <a href="#trends">SOTA Trends</a>
+  <a href="#bonus">Bonus Demos</a>
+  <a href="#downloads">Downloads</a>
+</nav>
+
+<section id="overview">
+<h2>一、概覽 — 為什麼這份 Survey 不只是文獻整理</h2>
+<div class="panel">
+<p>2024–2026 之間，Deep Reinforcement Learning 經歷了三個根本性轉變：</p>
+<ol style="color: var(--text)">
+<li><strong>從「獨立 sub-field」變成「foundation models 的對齊 / 推理元件」。</strong> DeepSeek-R1（Nature 2025）是 <em>首篇</em> peer-reviewed LLM Nature 論文，用純 RL on verifiable rewards 達 o1 等級推理能力。</li>
+<li><strong>從「flat policy」走向「dual-system + hierarchy」。</strong> Helix / GR00T N1 / Gemini Robotics 1.5 / π0.5 共同收斂在「VLM 想（5–10 Hz）+ visuomotor 做（100–200 Hz）」的雙系統架構。</li>
+<li><strong>從「sim 訓、real 失敗」走向「differentiable physics + foundation video model」。</strong> NVIDIA + Google + Disney 的 Newton physics engine、MuJoCo MJX、V-JEPA 2 重新定義 sim2real。</li>
+</ol>
+</div>
+
+<h3>關鍵 2024–2026 里程碑</h3>
+<div class="grid3">
+  <div class="panel">
+    <h3 style="color:var(--accent)">🔬 Science</h3>
+    <p style="color:var(--text)">AlphaProof + AlphaGeometry 2 → IMO 2024 銀牌（28/42）<br>
+    DIII-D plasma tearing 避免（Nature 2024）<br>
+    AI Scientist v2 → 首篇 AI 論文通過 ICLR 2025 workshop peer review</p>
+  </div>
+  <div class="panel">
+    <h3 style="color:var(--accent)">🤖 Robotics</h3>
+    <p style="color:var(--text)">Figure 03（Oct 2025，12k/yr 量產）<br>
+    Apptronik Apollo（$5B 估值，Mercedes/GXO/Jabil 部署）<br>
+    Berkeley G1 locomotion：RTX 4090 上 15 分鐘</p>
+  </div>
+  <div class="panel">
+    <h3 style="color:var(--accent)">🧠 Agents</h3>
+    <p style="color:var(--text)">MCP（97M 月下載，捐 Linux Foundation）<br>
+    GPT-5 SWE-bench Verified 82.7%<br>
+    DeepSeek-R1（Nature 2025，GRPO）</p>
+  </div>
+</div>
+</section>
+
+<hr/>
+
+<section id="parts">
+<h2>二、報告章節（7 + Bonus + Conclusion + References）</h2>
+<div class="panel">
+<table>
+<thead><tr><th>章節</th><th>主題</th><th>關鍵內容</th></tr></thead>
+<tbody>
+<tr><td><strong>Part 1</strong></td><td>DRL 基礎</td><td>MDP / Bellman / Policy Gradient；10 個演算法（DQN/Double DQN/PPO/A2C/A3C/SAC/TD3/MuZero/Decision Transformer/Offline RL/HRL）</td></tr>
+<tr><td><strong>Part 2</strong></td><td>Systems & Platforms</td><td>Isaac Lab / Habitat 3.0 / CARLA / Unity ML-Agents / RLlib / SB3 / FinRL / MineDojo / OpenVLA / AirSim</td></tr>
+<tr><td><strong>Part 3</strong></td><td>Agentic AI</td><td>OpenAI/Anthropic/Google agent 三大堆疊；RLHF→DPO→KTO→RLAIF→RLVR 對齊演化；ReAct/Toolformer/Gorilla；多 agent；memory 系統</td></tr>
+<tr><td><strong>Part 4-A</strong></td><td>Robotics & Embodied AI</td><td>VLA (OpenVLA/π0.5/Helix/GR00T N1/Gemini Robotics 1.5/Magma) + Diffusion Policy + Humanoids + Eureka/DrEureka/SERL</td></tr>
+<tr><td><strong>Part 4-B</strong></td><td>Game AI</td><td>AlphaGo (2016) → MuZero (2020) → Voyager (2023) → SIMA 2 (2025) → AlphaProof (2025)</td></tr>
+<tr><td><strong>Part 4-C</strong></td><td>AI for Science</td><td>AlphaFold 3、AlphaDev (LLVM)、AlphaTensor、AlphaProof、DIII-D plasma、GNoME+A-Lab、AI Scientist v2</td></tr>
+<tr><td><strong>Part 5</strong></td><td>SOTA 趨勢</td><td>10 條 trends + 5 條主軸收斂（Foundation×RL / Embodied generalist / Sim2Real×diff. physics / World Model / Verifier-driven RL）</td></tr>
+<tr><td><strong>Part 6</strong></td><td>Comparative analysis</td><td>DQN / PPO / SAC / MuZero / Decision Transformer 五法比較表 + 任務情境選型</td></tr>
+<tr><td><strong>Part 7</strong></td><td>GitHub 生態</td><td>SB3 / RLlib / CleanRL / Spinning Up / Isaac Lab / CARLA / Habitat / FinRL / MineDojo / Unity ML-Agents + 10 個 2025-26 新興 repo</td></tr>
+<tr><td><strong>Part 8</strong></td><td><strong>Bonus MVP</strong></td><td>(B) PPO on CartPole 81 秒到滿分；(C) ReAct LLM agent (100 行) — 詳見下方</td></tr>
+<tr><td><strong>Part 9</strong></td><td>Conclusion</td><td>3 個轉折 + 5 個未來方向 + 倫理風險（reward hacking / 對齊偏差 / 機器人安全 / reproducibility / 社會衝擊）</td></tr>
+<tr><td><strong>Part 10</strong></td><td>References</td><td>100+ 引用：Nature / Science / NeurIPS / ICML / ICLR / CoRL / RSS / CVPR / arXiv 2024-2026</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<hr/>
+
+<section id="trends">
+<h2>三、2025–2026 SOTA 五條主軸</h2>
+<div class="panel">
+<p>所有 trends 都可以收斂到下面五條互相交織的主軸：</p>
+<pre><code>1. Foundation Models × RL
+   RLHF / RLAIF / RLVR / GRPO; SIMA 2; AI Scientist v2
+
+2. Embodied Generalist Agent
+   OpenVLA, π0.5, GR00T N1, Magma, Gemini Robotics 1.5
+
+3. Sim2Real × Differentiable Physics
+   Newton (NVIDIA + Google + Disney), MJX, Isaac Lab 4.x, DrEureka
+
+4. World Model × Imagined Planning
+   DreamerV3 (Nature 2025), Genie 3, V-JEPA 2
+
+5. Verifier-Driven RL
+   DeepSeek-R1, AlphaProof, AlphaGeometry 2, AlphaDev</code></pre>
+<blockquote>下一波 breakthrough 可能來自<strong>五條軸的交叉點</strong> — 例如 world-model RL on humanoid、verifier-driven scientific agent。</blockquote>
+</div>
+</section>
+
+<hr/>
+
+<section id="bonus">
+<h2>四、Bonus MVP — 兩個 Hands-On Demos</h2>
+
+<h3>Bonus B — PPO on CartPole-v1 (Stable-Baselines3 v2.8.0)</h3>
+<div class="panel">
+<p>用 50,000 env steps、4 個並行 env、PPO 預設 hyperparameter 訓 CartPole-v1。</p>
+<div>
+  <span class="stat">Wallclock: <strong>81.0 s</strong> (CPU)</span>
+  <span class="stat">Episodes: <strong>~400+</strong></span>
+  <span class="stat">Eval (20 det.): <strong>500.0 ± 0.0</strong></span>
+  <span class="stat">Max return: <strong>500</strong></span>
+  <span class="badge badge-good">PERFECT CONVERGENCE</span>
+</div>
+<figure style="margin-top: 1em">
+  <img src="assets/ppo_cartpole_reward.png" alt="PPO CartPole reward curve">
+  <figcaption>Episode return 隨 env steps 變化；moving average window = 17。約 25K steps 後 reward 就穩定到 500。</figcaption>
+</figure>
+</div>
+
+<h3>Bonus C — Tool-Using ReAct LLM Agent (~100 行)</h3>
+<div class="panel">
+<p>實作 Part 3 提到的 ReAct loop：<code>Thought → Action → Observation → ... → FinalAnswer</code>。兩個工具：<code>calculator(expression)</code>（AST-based safe eval）+ <code>wiki_search(query)</code>（內建 DRL 迷你語料）。無 ANTHROPIC_API_KEY 也跑得起來（offline deterministic planner）。</p>
+
+<h4>Q1: Multi-hop reasoning（wiki + calculator）</h4>
+<pre><code>[USER]  What is sqrt(144) plus the year AlphaGo played Lee Sedol?
+[AGENT] Thought: I need AlphaGo's debut year. I'll check the wiki.
+        Action: wiki_search(AlphaGo)
+[TOOL]  -&gt; AlphaGo is a computer Go program developed by DeepMind.
+           Its match versus Lee Sedol took place in March 2016. ...
+[AGENT] Thought: Good — AlphaGo's Lee-Sedol match was in 2016.
+        Now compute sqrt(144) + 2016.
+        Action: calculator(sqrt(144) + 2016)
+[TOOL]  -&gt; 2028.0
+[AGENT] FinalAnswer: sqrt(144) = 12 and AlphaGo's Lee-Sedol match
+        was in 2016, so the answer is 2028.0.</code></pre>
+
+<h4>Q2: Wiki lookup（單 hop）</h4>
+<pre><code>[USER]  Tell me about DeepSeek-R1.
+[AGENT] Thought: Let me look up DeepSeek-R1.
+        Action: wiki_search(DeepSeek-R1)
+[TOOL]  -&gt; DeepSeek-R1, published in Nature in 2025, is an open-weights
+           reasoning model trained with pure RL from verifiable rewards
+           using a method called GRPO. ...
+[AGENT] FinalAnswer: DeepSeek-R1 is an open-weights reasoning model
+        trained with pure RL from verifiable rewards using GRPO.
+        It is the first peer-reviewed LLM in Nature (2025).</code></pre>
+
+<h4>Q3: Pure arithmetic</h4>
+<pre><code>[USER]  Compute 2 ** 10 - 24
+[AGENT] Thought: Pure arithmetic — use calculator.
+        Action: calculator(2 ** 10 - 24)
+[TOOL]  -&gt; 1000
+[AGENT] FinalAnswer: 1000</code></pre>
+
+<blockquote>這個 ~100 行 demo = ReAct (Yao et al., ICLR 2023) → Toolformer → Gorilla → Claude Code 的最小可運行版本。重點在<strong>架構而非規模</strong>。</blockquote>
+</div>
+</section>
+
+<hr/>
+
+<section id="downloads">
+<h2>五、檔案與重現</h2>
+<div class="panel">
+<table>
+<thead><tr><th>檔案</th><th>內容</th></tr></thead>
+<tbody>
+<tr><td><a href="../report/HW4_DRL_Survey.html">report/HW4_DRL_Survey.html</a></td><td>完整 11,575 字報告（HTML 自含 CSS；瀏覽器 Print → PDF 即可）</td></tr>
+<tr><td><a href="../report/HW4_DRL_Survey.md">report/HW4_DRL_Survey.md</a></td><td>同上的 Markdown 原始檔</td></tr>
+<tr><td><a href="../slides/slides.md">slides/slides.md</a></td><td>10–15 分鐘簡報（15 張投影片，Marp-compatible）</td></tr>
+<tr><td><a href="../code/ppo_demo.py">code/ppo_demo.py</a></td><td>Bonus B：PPO on CartPole</td></tr>
+<tr><td><a href="../code/llm_agent_demo.py">code/llm_agent_demo.py</a></td><td>Bonus C：ReAct LLM agent</td></tr>
+<tr><td><a href="../code/requirements.txt">code/requirements.txt</a></td><td>Bonus dependency</td></tr>
+<tr><td><a href="../README.md">README.md</a></td><td>中文導覽（GitHub 入口）</td></tr>
+<tr><td><a href="../reference/research_notes_consolidated.md">reference/research_notes_consolidated.md</a></td><td>文獻搜集筆記（3 個研究 agent 的整合輸出）</td></tr>
+</tbody>
+</table>
+
+<h3>快速重現</h3>
+<pre><code># 1. 裝依賴
+pip install -r code/requirements.txt
+
+# 2. 跑 PPO（CPU ~90 秒，生成 reward 曲線）
+python code/ppo_demo.py
+
+# 3. 跑 LLM agent（無 API key 也能跑）
+python code/llm_agent_demo.py
+
+# 4. 重生 HTML
+python report/build_html.py</code></pre>
+</div>
+</section>
+
+<p class="footer">© 2026 csm088220 · DRL Course HW4 · <a href="https://github.com/oomao">github.com/oomao</a> · 文獻時間範圍 2024–2026</p>
+
+</main>
+</body>
+</html>

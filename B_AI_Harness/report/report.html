@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HW4-B · AI Harness — DRL Research Assistant</title>
+<style>
+:root {
+  --fg: #0f172a;
+  --muted: #64748b;
+  --bg: #ffffff;
+  --accent: #0ea5e9;
+  --border: #cbd5e1;
+  --code-bg: #f1f5f9;
+}
+html { scroll-behavior: smooth; }
+body {
+  font-family: "Times New Roman", "Songti TC", "PMingLiU", "Microsoft JhengHei", serif;
+  font-size: 11pt;
+  line-height: 1.55;
+  color: var(--fg);
+  background: var(--bg);
+  max-width: 850px;
+  margin: 2em auto;
+  padding: 0 1.5em 4em;
+}
+h1 { font-size: 1.9em; margin-top: 1.4em; border-bottom: 2px solid var(--accent); padding-bottom: .2em; }
+h2 { font-size: 1.35em; margin-top: 1.8em; color: var(--accent); }
+h3 { font-size: 1.1em; margin-top: 1.4em; }
+h4 { font-size: 1.0em; margin-top: 1.2em; color: var(--muted); }
+p, li { text-align: justify; }
+ul, ol { padding-left: 1.4em; }
+strong { color: #0c4a6e; }
+code {
+  font-family: "Consolas", "Menlo", "Courier New", monospace;
+  background: var(--code-bg);
+  padding: 0.15em 0.4em;
+  border-radius: 3px;
+  font-size: 0.93em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.8em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.86em;
+  line-height: 1.4;
+  border-left: 3px solid var(--accent);
+}
+pre code { background: transparent; padding: 0; }
+table { border-collapse: collapse; margin: 1em 0; width: 100%; font-size: 0.92em; }
+th, td { border: 1px solid var(--border); padding: 6px 10px; vertical-align: top; text-align: left; }
+th { background: #f8fafc; }
+hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+blockquote {
+  border-left: 4px solid var(--accent);
+  margin: 1em 0; padding: 0.4em 1em;
+  color: var(--muted); background: var(--code-bg);
+  border-radius: 0 6px 6px 0;
+}
+img { max-width: 100%; height: auto; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+@media print {
+  body { margin: 0; max-width: none; padding: 1cm 1.5cm; font-size: 10.5pt; }
+  h2, h3 { page-break-after: avoid; }
+  table, pre, blockquote { page-break-inside: avoid; }
+  a { color: var(--fg); text-decoration: none; }
+}
+</style>
+</head>
+<body>
+<h1 id="ai-harness-design-a-drl-research-assistant">AI Harness Design: A DRL Research Assistant</h1>
+<blockquote>
+<p><em>"The best demo of an AI Harness for literature survey is one that could have written this course's other deliverable."</em>
+— Project tagline; cross-references <code>../A_DRL_Survey/</code> (this HW4's other version).</p>
+</blockquote>
+<h2 id="1-problem-definition-use-case">1. Problem Definition &amp; Use Case</h2>
+<h3 id="11">1.1 痛點</h3>
+<p>對於修 DRL 課程的研究生，<strong>為一個新主題做文獻綜述</strong>是反覆出現、耗時且容易遺漏 SOTA 的工作：
+- arXiv 每天上百篇新 paper；
+- 不同主題涵蓋面廣（VLA / Diffusion Policy / RLHF / Sim2Real ...）；
+- 引用格式（IEEE / ACM / BibTeX）轉換手動費時；
+- 主題之間的 cross-cutting insight（如「五條 SOTA 主軸的交叉點」）需要 across-paper synthesis。</p>
+<h3 id="12">1.2 目標使用者</h3>
+<table>
+<thead>
+<tr>
+<th>Persona</th>
+<th>用途</th>
+<th>典型 query</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>研究生</td>
+<td>HW 文獻綜述</td>
+<td>"幫我整理 2024–2026 robotics VLA 模型的 SOTA"</td>
+</tr>
+<tr>
+<td>研究員</td>
+<td>進入新領域</td>
+<td>"AlphaGo lineage 12 年的演化重點？"</td>
+</tr>
+<tr>
+<td>寫論文者</td>
+<td>蒐集 Related Work</td>
+<td>"PPO 與 GRPO 的關鍵差異？"</td>
+</tr>
+</tbody>
+</table>
+<h3 id="13-ai-harness-llm">1.3 為什麼用 AI Harness（而不是單一 LLM 對話）</h3>
+<p>單純把問題丟給 ChatGPT 有三個 fundamental 問題：(1) <strong>知識截止</strong> — LLM 不知道 2025–2026 新 paper；(2) <strong>幻覺引用</strong> — LLM 常編造看似真實但不存在的 arXiv ID；(3) <strong>無 stateful 規劃</strong> — 無法把大型查詢拆解成多階段執行並彙整。</p>
+<p>AI Harness 用 <strong>LLM as controller + 外部工具 + 記憶體</strong> 解這三點：工具給 LLM「即時 + 可驗證」的事實，memory 維持跨輪 state，orchestration 確保複雜任務不會丟步驟。</p>
+<hr />
+<h2 id="2-ai-harness-system-architecture">2. AI Harness System Architecture</h2>
+<pre><code>                    ┌─────────────────────┐
+                    │     User Query       │
+                    └──────────┬──────────┘
+                               ▼
+        ╔══════════════════════════════════════════════╗
+        ║              LLM CONTROLLER                  ║
+        ║         (Claude Haiku 4.5 by default)        ║
+        ║                                              ║
+        ║   ┌─────────┐  ┌─────────┐  ┌─────────┐    ║
+        ║   │ Planner │→│ Reasoner│→│ Critic  │      ║
+        ║   └─────────┘  └─────────┘  └─────────┘    ║
+        ║                    │                         ║
+        ║                    ▼                         ║
+        ║              ┌─────────┐                     ║
+        ║              │Compiler │                     ║
+        ║              └─────────┘                     ║
+        ╚════════╤═════════════════════════╤═══════════╝
+                 │                         │
+        ┌────────▼────────┐       ┌────────▼─────────┐
+        │     MEMORY      │       │      TOOLS       │
+        │                 │       │                  │
+        │ Short-term:     │       │ T1 arxiv_search  │
+        │   conversation  │       │ T2 paper_summarize│
+        │                 │       │ T3 citation_format│
+        │ Long-term:      │       │ T4 note_save     │
+        │   note store    │       │                  │
+        │   citation DB   │       │                  │
+        └─────────────────┘       └────────┬─────────┘
+                                           ▼
+                                  ┌──────────────────┐
+                                  │  External Services│
+                                  │  arXiv API / cache│
+                                  └──────────────────┘
+                                           │
+                    ┌──────────────────────▼──────────────────────┐
+                    │    Structured Survey Report (Markdown)       │
+                    │      with IEEE-formatted citations           │
+                    └──────────────────────────────────────────────┘
+</code></pre>
+<h3 id="21">2.1 三個核心元件</h3>
+<ol>
+<li><strong>LLM Controller</strong> — 四個 sub-role 共用同一個 model（Claude Haiku 4.5），透過不同 system prompt 切換角色，無需多個 model instance。</li>
+<li><strong>Memory</strong> — 雙層：
+   - <em>Short-term</em>：當輪對話 history，用 LLM 原生 context window。
+   - <em>Long-term</em>：JSON-backed note store（per-topic）+ citation DB（per-paper），跨輪持久化。</li>
+<li><strong>Tools</strong> — 4 個 function-callable APIs，每個都有 strict JSON schema。</li>
+</ol>
+<hr />
+<h2 id="3-tool-design3-4">3. Tool Design（≥3，本系統 4 個）</h2>
+<p>每個工具設計遵循 <strong>三原則</strong>：(a) 單一職責；(b) 嚴格 JSON schema（input/output）；(c) 失敗時回 actionable error 而非 stack trace。</p>
+<h3 id="31-tool-1-arxiv_search">3.1 Tool 1 — <code>arxiv_search</code></h3>
+<pre><code class="language-python">def arxiv_search(
+    query: str,
+    year_min: int = 2024,
+    year_max: int = 2026,
+    max_results: int = 10,
+) -&gt; list[dict]:
+    &quot;&quot;&quot;
+    Search arXiv for papers matching query within year range.
+
+    Returns:
+        list of {arxiv_id, title, authors, abstract, year, primary_category}
+    &quot;&quot;&quot;
+</code></pre>
+<p><strong>設計考量</strong>：預設 <code>year_min=2024</code> 反映「SOTA 文獻優先」；<code>max_results=10</code> 平衡 coverage 與 token cost。實作支援兩個 backend：(a) 真實 arXiv API（<code>http://export.arxiv.org/api/query</code>）；(b) offline cached corpus（用於 demo + reproducibility）。</p>
+<h3 id="32-tool-2-paper_summarize">3.2 Tool 2 — <code>paper_summarize</code></h3>
+<pre><code class="language-python">def paper_summarize(arxiv_id: str) -&gt; dict:
+    &quot;&quot;&quot;
+    Fetch a paper's abstract and extract structured summary.
+
+    Returns:
+        {arxiv_id, title, key_contribution, methods, results,
+         limitations, related_work_anchor}
+    &quot;&quot;&quot;
+</code></pre>
+<p><strong>設計考量</strong>：輸出是 <strong>structured</strong> 而非 free-form summary — 強迫 LLM 抽取「contribution / method / results / limitations」四個維度，下游 Compiler 可以直接 template 化使用。</p>
+<h3 id="33-tool-3-citation_format">3.3 Tool 3 — <code>citation_format</code></h3>
+<pre><code class="language-python">def citation_format(
+    paper: dict,
+    style: Literal[&quot;IEEE&quot;, &quot;ACM&quot;, &quot;APA&quot;, &quot;BibTeX&quot;] = &quot;IEEE&quot;,
+) -&gt; str:
+    &quot;&quot;&quot;Format a paper dict into a citation string in the requested style.&quot;&quot;&quot;
+</code></pre>
+<p><strong>設計考量</strong>：純函式（pure function），無 side effect，可單元測試。支援 4 個主流 style，預設 IEEE（DRL/AI 領域最常見）。</p>
+<h3 id="34-tool-4-note_save">3.4 Tool 4 — <code>note_save</code></h3>
+<pre><code class="language-python">def note_save(topic: str, content: str, tags: list[str] | None = None) -&gt; dict:
+    &quot;&quot;&quot;
+    Persist a note under a topic key (acts as long-term memory).
+
+    Returns:
+        {topic, note_count, total_chars, recently_added_tags}
+    &quot;&quot;&quot;
+</code></pre>
+<p><strong>設計考量</strong>：這是 <strong>memory 與 tools 的橋樑</strong> — 透過工具呼叫操作 memory，LLM 不需要直接看到底層 storage 細節。<code>topic</code> 為主鍵讓後續 Compiler 能按主題分組取出 notes。</p>
+<h3 id="35-tools">3.5 Tools 比較表</h3>
+<table>
+<thead>
+<tr>
+<th>工具</th>
+<th>副作用</th>
+<th>對外連線</th>
+<th>失敗 mode</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>arxiv_search</code></td>
+<td>無（讀取）</td>
+<td>可選 arXiv API</td>
+<td>network error → fallback to offline cache</td>
+</tr>
+<tr>
+<td><code>paper_summarize</code></td>
+<td>無</td>
+<td>可選 arXiv</td>
+<td>unknown ID → 回 <code>{"error": "..."}</code> 而非 raise</td>
+</tr>
+<tr>
+<td><code>citation_format</code></td>
+<td>無</td>
+<td>無</td>
+<td>missing field → 用 <code>&lt;unknown&gt;</code> 占位</td>
+</tr>
+<tr>
+<td><code>note_save</code></td>
+<td><strong>有</strong>（寫入 JSON store）</td>
+<td>無</td>
+<td>disk full → log + return ack with <code>persisted: false</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-workflow-agent-orchestration">4. Workflow / Agent Orchestration</h2>
+<h3 id="41-pipeline">4.1 四階段 pipeline</h3>
+<pre><code>PHASE 1  PLAN         User query → N sub-topics + dependency DAG
+   │
+   ▼
+PHASE 2  EXECUTE      For each sub-topic (parallel-eligible):
+                        ReAct loop:
+                          search → top-K → summarize_each → note_save
+   │
+   ▼
+PHASE 3  CRITIC       LLM reviews notes across sub-topics; flags gaps
+                      → optionally loops back to PHASE 2 with refined query
+   │
+   ▼
+PHASE 4  COMPILE      Notes + citations → templated Markdown report
+                      → return to user
+</code></pre>
+<h3 id="42-per-sub-topic-react-loopphase-2">4.2 Per-sub-topic ReAct loop（PHASE 2 細節）</h3>
+<pre><code>LOOP for sub_topic in plan.sub_topics:
+    Thought : &quot;What's the key recent paper for {sub_topic}?&quot;
+    Action  : arxiv_search(sub_topic, year_min=2024)
+    Obs     : [paper1, paper2, ..., paperK]
+
+    for paper in top-K:
+        Thought : &quot;Summarize paper {paper.id}.&quot;
+        Action  : paper_summarize(paper.id)
+        Obs     : {key_contribution, methods, ...}
+
+        Action  : note_save(sub_topic, formatted_summary, tags=[...])
+        Obs     : {topic, note_count, ...}
+
+    Thought : &quot;Coverage check — am I missing a major angle?&quot;
+    if yes:
+        Action  : arxiv_search(refined_query)
+        ... (back to top of inner loop)
+</code></pre>
+<h3 id="43-sequence-diagram">4.3 Sequence Diagram（簡化版）</h3>
+<pre><code>User    Controller    arxiv_search  paper_summarize  note_save  citation_format
+ │           │             │              │              │             │
+ │──query──▶│             │              │              │             │
+ │           │─plan(N)────▶│             │              │             │
+ │           │◀── plan ────│             │              │             │
+ │           │                                                         │
+ │           │ for each sub-topic ──────────────────────────────────── │
+ │           │──search(q)─▶│             │              │             │
+ │           │◀─[papers]───│             │              │             │
+ │           │                                                         │
+ │           │ for each top paper ────────────────────────────────────│
+ │           │──summarize─────────────▶│              │             │
+ │           │◀──── {contrib, methods, limits} ───│              │   │
+ │           │──note_save──────────────────────────▶│             │   │
+ │           │◀── ack ─────────────────────────────│             │   │
+ │           │                                                         │
+ │           │──critic-loop (self-prompt, may trigger more searches) ─│
+ │           │                                                         │
+ │           │──cite_each────────────────────────────────────────────▶│
+ │           │◀── [IEEE strings] ─────────────────────────────────────│
+ │           │                                                         │
+ │           │──compile(template)──────────────────────────────────── │
+ │◀── report─│                                                         │
+</code></pre>
+<h3 id="44-decision-making">4.4 Decision-making 機制</h3>
+<p>LLM Controller 用三類 prompt 切換角色：</p>
+<ol>
+<li><strong>Planner prompt</strong>："分解 user query 為 sub-topics、估計每個的 paper 數量、產生 DAG"。輸出格式 enforced via JSON schema。</li>
+<li><strong>Reasoner prompt</strong>：ReAct 形式（<code>Thought / Action / Observation</code>），每輪只允許單一 action。</li>
+<li><strong>Critic prompt</strong>："給定當前 notes，是否有 missing aspect？若有列出 refined queries"。</li>
+<li><strong>Compiler prompt</strong>："給定 notes + citations，按 IEEE 結構（abstract, sections, refs）產生 Markdown"。</li>
+</ol>
+<p>每個 prompt 都明確 enforce 輸出格式，避免 free-form 漂移。Tool call schema 用 Anthropic / OpenAI 的 function calling spec 表達。</p>
+<hr />
+<h2 id="5-evaluation-framework">5. Evaluation Framework</h2>
+<h3 id="51">5.1 量化指標</h3>
+<table>
+<thead>
+<tr>
+<th>指標</th>
+<th>定義</th>
+<th>量法</th>
+<th>目標</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Coverage</strong></td>
+<td>F1 of retrieved vs expert-curated paper list</td>
+<td>5 個 fixed query × 專家標註 ground truth</td>
+<td>≥ 0.7</td>
+</tr>
+<tr>
+<td><strong>Citation accuracy</strong></td>
+<td>% of citations whose arxiv_id 真實存在</td>
+<td>隨機抽 10 條 → arxiv.org 查</td>
+<td>≥ 95%</td>
+</tr>
+<tr>
+<td><strong>Latency</strong></td>
+<td>End-to-end wallclock for full report</td>
+<td>5 個 fixed query 平均</td>
+<td>≤ 120 s</td>
+</tr>
+<tr>
+<td><strong>Token cost</strong></td>
+<td>Sum of input+output tokens × price</td>
+<td>用 Anthropic API usage</td>
+<td>≤ $0.50 / query</td>
+</tr>
+<tr>
+<td><strong>Tool call efficiency</strong></td>
+<td>(useful calls) / (total calls)</td>
+<td>manual annotation</td>
+<td>≥ 80%</td>
+</tr>
+</tbody>
+</table>
+<h3 id="52-rubric">5.2 質性指標（rubric）</h3>
+<p>5 點 Likert（1=很差，5=很好），3 位 evaluator 平均：</p>
+<table>
+<thead>
+<tr>
+<th>維度</th>
+<th>觀察點</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Helpfulness</td>
+<td>報告是否回答 user 的真實意圖</td>
+</tr>
+<tr>
+<td>Accuracy</td>
+<td>引用 / 事實是否正確</td>
+</tr>
+<tr>
+<td>Completeness</td>
+<td>是否漏掉重要 SOTA</td>
+</tr>
+<tr>
+<td>Clarity</td>
+<td>結構是否易讀、insight 是否清楚</td>
+</tr>
+<tr>
+<td>Novelty</td>
+<td>是否提出 cross-paper synthesis</td>
+</tr>
+</tbody>
+</table>
+<p><strong>目標</strong>：≥ 4/5 平均。</p>
+<h3 id="53-ablation">5.3 Ablation 計畫</h3>
+<table>
+<thead>
+<tr>
+<th>組別</th>
+<th>描述</th>
+<th>預期觀察</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Full</td>
+<td>完整 4-phase pipeline</td>
+<td>Baseline</td>
+</tr>
+<tr>
+<td>− Critic</td>
+<td>跳過 PHASE 3</td>
+<td>Coverage 降，但 latency 減半</td>
+</tr>
+<tr>
+<td>− Planner</td>
+<td>不做 sub-topic 分解，single ReAct loop</td>
+<td>Coverage / clarity 降</td>
+</tr>
+<tr>
+<td>Mock LLM</td>
+<td>offline deterministic planner</td>
+<td>用於 CI 測試 reliability</td>
+</tr>
+</tbody>
+</table>
+<h3 id="54-mode">5.4 失敗 mode 與防護</h3>
+<table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>防護</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LLM 幻覺 arxiv_id</td>
+<td><code>paper_summarize</code> 對未知 ID 回 error，不靜默填預設值</td>
+</tr>
+<tr>
+<td>工具迴圈呼叫</td>
+<td>每個 phase 設 <code>max_steps</code>；超過 → fall back to compile with existing notes</td>
+</tr>
+<tr>
+<td>Reward hacking style 行為（LLM 假裝寫了 note 但沒呼叫工具）</td>
+<td>Compiler 只用 note store 中<strong>實際存在</strong>的 entries；不接受 LLM inline 編造的 fact</td>
+</tr>
+<tr>
+<td>網路 / API failure</td>
+<td>offline cache fallback；標記 <code>[OFFLINE_DEMO_MODE]</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-implementation-demoaccompanying-mvp">6. Implementation &amp; Demo（accompanying MVP）</h2>
+<p>詳見 <code>code/</code>：
+- <code>code/tools.py</code> — 4 個工具的實作（offline corpus + 可選真實 arXiv API）
+- <code>code/harness_demo.py</code> — Plan / Reason / Critic / Compile 四段 controller
+- <code>code/requirements.txt</code>
+- <code>artifacts/demo_run.md</code> — 一次完整的 demo trace（query：「Survey robotics VLA models 2024-2026」）</p>
+<p><strong>MVP scope</strong>（刻意保持小）：</p>
+<ul>
+<li>用 ~400 行 Python 完整實作 4-phase pipeline；</li>
+<li>兩個 LLM backend：Claude（API key 可選）/ offline deterministic planner（CI-safe）；</li>
+<li>跑一個 query 產出 ~600 字 mini-survey + 5 條 IEEE 引用，可端對端 reproduce。</li>
+</ul>
+<hr />
+<h2 id="7-conclusion">7. Conclusion</h2>
+<p>本 AI Harness 設計用 <strong>「LLM as controller + 4 個專責工具 + 雙層 memory + 4-phase orchestration」</strong> 的架構解決「研究生做 DRL 文獻綜述」的具體問題。三個設計重點：</p>
+<ol>
+<li><strong>Tool 設計重 strict schema 與 fail-safe</strong>——LLM 永遠在 tool spec 邊界內工作。</li>
+<li><strong>Orchestration 用 plan→execute→critic→compile 四段</strong> 而非單一 ReAct loop，讓系統能處理需要 cross-paper synthesis 的複雜任務。</li>
+<li><strong>Evaluation 同時量化（coverage / accuracy / cost）與質化（rubric）</strong>，並設計 ablation 區隔每個元件的貢獻。</li>
+</ol>
+<p>更廣的 lesson：<strong>「AI Harness 的競爭力不在 LLM 多強，而在 system design 多嚴謹」</strong>——這也是 Anthropic MCP、OpenAI Operator、Claude Code 等業界系統共同的方法論。</p>
+<hr />
+<p>\textit{See <code>log.md</code> for the AI-assisted iterative design process; see <code>infographic/architecture.html</code> for the full visual system diagram.}</p>
+</body>
+</html>

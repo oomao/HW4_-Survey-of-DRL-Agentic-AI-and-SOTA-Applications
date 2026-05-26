@@ -1,0 +1,1701 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HW4 — A Survey of Deep Reinforcement Learning, Agentic AI, and SOTA Applications (2024–2026)</title>
+<style>
+:root {
+  --fg: #0f172a;
+  --muted: #64748b;
+  --bg: #ffffff;
+  --accent: #0ea5e9;
+  --border: #cbd5e1;
+  --code-bg: #f1f5f9;
+}
+html { scroll-behavior: smooth; }
+body {
+  font-family: "Times New Roman", "Songti TC", "PMingLiU", "Microsoft JhengHei", serif;
+  font-size: 11pt;
+  line-height: 1.55;
+  color: var(--fg);
+  background: var(--bg);
+  max-width: 850px;
+  margin: 2em auto;
+  padding: 0 1.5em 4em;
+}
+h1 { font-size: 1.9em; margin-top: 1.4em; border-bottom: 2px solid var(--accent); padding-bottom: .2em; }
+h2 { font-size: 1.35em; margin-top: 1.8em; color: var(--accent); }
+h3 { font-size: 1.1em; margin-top: 1.4em; }
+h4 { font-size: 1.0em; margin-top: 1.2em; color: var(--muted); }
+p, li { text-align: justify; }
+ul, ol { padding-left: 1.4em; }
+strong { color: #0c4a6e; }
+code {
+  font-family: "Consolas", "Menlo", "Courier New", monospace;
+  background: var(--code-bg);
+  padding: 0.15em 0.4em;
+  border-radius: 3px;
+  font-size: 0.93em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.8em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.9em;
+  line-height: 1.4;
+  border-left: 3px solid var(--accent);
+}
+pre code { background: transparent; padding: 0; }
+table {
+  border-collapse: collapse;
+  margin: 1em 0;
+  width: 100%;
+  font-size: 0.92em;
+}
+th, td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  vertical-align: top;
+  text-align: left;
+}
+th { background: #f8fafc; }
+hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+blockquote {
+  border-left: 4px solid var(--accent);
+  margin: 1em 0;
+  padding: 0.4em 1em;
+  color: var(--muted);
+  background: var(--code-bg);
+  border-radius: 0 6px 6px 0;
+}
+img { max-width: 100%; height: auto; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* footnote refs */
+sup a { color: var(--accent); font-size: 0.85em; }
+
+/* page-break helpers when printing to PDF */
+@media print {
+  body { margin: 0; max-width: none; padding: 1cm 1.5cm; font-size: 10.5pt; }
+  h1 { page-break-before: auto; }
+  h2, h3 { page-break-after: avoid; }
+  table, pre, blockquote, figure { page-break-inside: avoid; }
+  a { color: var(--fg); text-decoration: none; }
+}
+.toc { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 1em 1.5em; margin: 1em 0; }
+.toc h2 { border: none; margin-top: 0; color: var(--fg); font-size: 1.1em; }
+</style>
+</head>
+<body>
+<blockquote><strong>Abstract.</strong>
+ Deep Reinforcement Learning (DRL) has evolved from a research curiosity capable of mastering Atari games into a foundational ingredient of today's most capable AI systems — from humanoid robots fluently manipulating household objects, to LLM-powered agents that browse the web, write code, and conduct multi-step scientific reasoning. This report surveys the DRL landscape across three axes: (1) the algorithmic foundations from DQN to Decision Transformer; (2) the simulation platforms and open-source ecosystem that enable modern DRL research; and (3) the rise of \emph{agentic AI} — large-model agents that combine RL fine-tuning (RLHF/RLAIF/RLVR) with tool use, planning, and embodiment. We analyze representative SOTA systems from 2024–2026 across robotics, game AI, and AI for science, identify five cross-cutting research trends (world models, diffusion policies, foundation agents, sim2real, RL+Transformers), and provide a comparative analysis of five algorithm families along axes of sample efficiency, stability, and real-world deployability. A small reproducible Bonus MVP — a PPO agent on classic control plus a tool-using LLM agent — is included to make the survey concrete.
+</blockquote>
+
+<p><strong>Keywords:</strong> Deep Reinforcement Learning, Agentic AI, RLHF, RLAIF, Vision-Language-Action Models, Diffusion Policy, World Models, Foundation Agents, Sim2Real.</p>
+<hr/>
+<h1 id="part-1-introduction-to-deep-reinforcement-learning">Part 1 — Introduction to Deep Reinforcement Learning</h1>
+<h2 id="11-fundamental-concepts">1.1 Fundamental Concepts</h2>
+<h3 id="111-reinforcement-learning-rl">1.1.1 Reinforcement Learning (RL)</h3>
+<p>Reinforcement Learning（強化學習）研究的是一個 <strong>agent</strong> 如何在與 <strong>environment</strong> 反覆互動的過程中，學會選擇能最大化長期累積回饋（cumulative reward）的行動。RL 與監督式 / 非監督式學習的本質差異在於：<strong>訓練訊號不是事先標好的標籤，而是由 agent 自己用行動「探索」出來的回饋。</strong> 這個 closed-loop 的結構讓 RL 同時面對三個傳統 ML 不必處理的難題——延遲回饋（credit assignment）、非穩態資料分布（policy 改變則資料分布跟著改變）、以及 <strong>探索 vs 利用</strong> 的權衡。</p>
+<h3 id="112-markov-decision-process-mdp">1.1.2 Markov Decision Process (MDP)</h3>
+<p>絕大多數 DRL 演算法都假設環境可以被建模成一個 <strong>Markov Decision Process</strong> $\mathcal{M} = (\mathcal{S}, \mathcal{A}, P, R, \gamma)$：</p>
+<ul>
+<li>$\mathcal{S}$：狀態空間。</li>
+<li>$\mathcal{A}$：動作空間（離散或連續）。</li>
+<li>$P(s' \mid s, a)$：轉移機率，滿足 <strong>Markov property</strong>——下一狀態只依賴當前 $(s, a)$，不依賴歷史。</li>
+<li>$R(s, a)$ 或 $R(s, a, s')$：reward function。</li>
+<li>$\gamma \in [0, 1)$：discount factor，把無窮時域問題折成有限期望值。</li>
+</ul>
+<p>當部份可觀測時退化成 <strong>POMDP</strong>（Partially Observable MDP），agent 只看得到 observation $o_t$ 而非 $s_t$，這是真實機器人和大多數 video games 的設定。</p>
+<h3 id="113-reward-function">1.1.3 Reward Function</h3>
+<p>Reward function 是 RL 中最重要、也最容易被低估的設計選擇。它決定「目標是什麼」，因此一切學到的行為都是 reward 的副產物——reward hacking、specification gaming 都源自此處。SOTA 趨勢之一是 <strong>不再人工手刻 reward</strong>，而是用 LLM 生成（如 NVIDIA Eureka）、用人類偏好學（RLHF）、或從可驗證的成功訊號取得（RLVR，如 DeepSeek-R1）。</p>
+<h3 id="114-policy-value-functions">1.1.4 Policy 與 Value Functions</h3>
+<ul>
+<li><strong>Policy</strong> $\pi(a \mid s)$：在每個狀態下選擇動作的分布。Deterministic 時寫成 $\pi(s) \to a$。</li>
+<li><strong>State-value</strong> $V^\pi(s) = \mathbb{E}<em t="0">\pi[\sum</em>^\infty \gamma^t r_t \mid s_0 = s]$：從 $s$ 起遵循 $\pi$ 的期望累積折扣回饋。</li>
+<li><strong>Action-value</strong> $Q^\pi(s, a)$：在 $s$ 先執行 $a$ 再遵循 $\pi$ 的期望回饋。</li>
+<li><strong>Advantage</strong> $A^\pi(s, a) = Q^\pi(s, a) - V^\pi(s)$：執行 $a$ 比平均策略好多少，是 policy gradient 方法的核心訊號。</li>
+</ul>
+<p>兩條基礎理論：<strong>Bellman 方程</strong>將 $V$、$Q$ 寫成遞迴形式，為所有 value-based 演算法提供更新公式；<strong>Policy Gradient Theorem</strong> 給出 $\nabla_\theta J(\theta) = \mathbb{E}<em>{\pi</em>\theta}[\nabla_\theta \log \pi_\theta(a \mid s) Q^{\pi_\theta}(s,a)]$，是 PPO/SAC 等 policy-based 方法的根。</p>
+<h3 id="115-exploration-vs-exploitation">1.1.5 Exploration vs Exploitation</h3>
+<p>短期想最大化 reward 就應該選目前看起來最好的動作（exploit），但長期想找到真正的最優策略就必須嘗試陌生動作（explore）。常見策略：</p>
+<table>
+<thead>
+<tr>
+<th>策略</th>
+<th>機制</th>
+<th>典型用法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>$\epsilon$-greedy</td>
+<td>以機率 $\epsilon$ 隨機、否則 greedy</td>
+<td>DQN 系列</td>
+</tr>
+<tr>
+<td>Boltzmann/softmax</td>
+<td>依 $Q$ 值加溫度做機率取樣</td>
+<td>tabular RL</td>
+</tr>
+<tr>
+<td>Entropy bonus</td>
+<td>在 loss 加入策略熵 $\mathcal{H}(\pi)$</td>
+<td>A2C / PPO / SAC</td>
+</tr>
+<tr>
+<td>Intrinsic motivation</td>
+<td>額外的 curiosity / prediction-error reward</td>
+<td>RND, ICM</td>
+</tr>
+<tr>
+<td>Posterior sampling</td>
+<td>從後驗分布取樣 $Q$</td>
+<td>Bootstrapped DQN</td>
+</tr>
+<tr>
+<td>Noise on parameters</td>
+<td>NoisyNet</td>
+<td>Rainbow DQN</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="12-deep-rl-algorithms-survey-and-comparison">1.2 Deep RL Algorithms — Survey and Comparison</h2>
+<p>下面對 10 個代表性演算法做系統性整理，每個都包含 <strong>core idea / advantages / weaknesses / typical applications</strong>。</p>
+<h3 id="121-dqn-deep-q-network">1.2.1 DQN (Deep Q-Network)</h3>
+<p><strong>Core idea.</strong> Mnih et al., Nature 2015 <sup id="fnref:mnih2015"><a class="footnote-ref" href="#fn:mnih2015">1</a></sup>。用神經網路 $Q_\theta(s,a)$ 近似 action-value，搭配兩個關鍵 trick 解決深度 RL 的不穩定：
+1. <strong>Experience Replay Buffer</strong>：把 $(s,a,r,s')$ 存進 buffer，訓練時均勻取樣，打破時序相關性。
+2. <strong>Target Network</strong>：另外維護一個延遲更新的 $Q_{\theta^-}$，提供穩定的 target $y = r + \gamma \max_{a'} Q_{\theta^-}(s', a')$。</p>
+<p><strong>Advantages.</strong> 第一個在 high-dimensional 像素輸入上成功的 DRL 演算法；架構簡單；off-policy 因此可重複利用資料。</p>
+<p><strong>Weaknesses.</strong> $\max$ 運算造成系統性 Q 值高估（overestimation bias）；只能處理 <strong>離散動作</strong>；對 reward scaling 敏感；訓練不穩。</p>
+<p><strong>Typical applications.</strong> Atari 2600 benchmark、桌面遊戲、離散決策（推薦、廣告 bidding）。</p>
+<h3 id="122-double-dqn">1.2.2 Double DQN</h3>
+<p><strong>Core idea.</strong> van Hasselt et al., AAAI 2016 <sup id="fnref:vanhasselt2016"><a class="footnote-ref" href="#fn:vanhasselt2016">2</a></sup>。把目標的 $\max$ 拆成「選動作」與「估值」兩步：
+$$ y = r + \gamma \, Q_{\theta^-}!\left(s', \arg\max_{a'} Q_\theta(s', a')\right). $$
+online network 負責挑動作、target network 負責估該動作的 Q，緩解高估偏差。</p>
+<p><strong>Advantages.</strong> 改動極小（一行 code），效果卻顯著穩定；後續所有 DQN 變體幾乎都內建。</p>
+<p><strong>Weaknesses.</strong> 仍是離散動作；overestimation 沒有完全消除（只是降低）；在動作空間很大時偏差可能轉為低估。</p>
+<p><strong>Typical applications.</strong> 所有原本 DQN 的場景；現代 Atari 訓練的預設 baseline。</p>
+<h3 id="123-ppo-proximal-policy-optimization">1.2.3 PPO (Proximal Policy Optimization)</h3>
+<p><strong>Core idea.</strong> Schulman et al., OpenAI 2017 <sup id="fnref:schulman2017ppo"><a class="footnote-ref" href="#fn:schulman2017ppo">3</a></sup>。沿用 TRPO 的 trust-region 哲學（避免每次更新走太遠導致 policy 崩壞），但用一個簡單的 <strong>clipped surrogate objective</strong> 取代二階近似：
+$$ L^{CLIP}(\theta) = \mathbb{E}<em>t!\left[\min\left(r_t(\theta) \hat A_t,\ \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon)\, \hat A_t\right)\right], $$
+其中 $r_t(\theta) = \pi</em>\theta(a_t \mid s_t) / \pi_{\theta_{\text{old}}}(a_t \mid s_t)$。</p>
+<p><strong>Advantages.</strong> <strong>目前最常用的 on-policy 演算法</strong>；實作簡單、超參數魯棒、適用離散與連續動作；是 RLHF / RLAIF / RLVR 的事實標準（GPT、Claude、Gemini 全部用 PPO 變體做對齊）。</p>
+<p><strong>Weaknesses.</strong> on-policy 因此 sample-inefficient；對 advantage normalization、learning-rate schedule 等實作細節敏感（被 Andrychowicz et al., ICLR 2021 <sup id="fnref:andrychowicz2021"><a class="footnote-ref" href="#fn:andrychowicz2021">4</a></sup> 證實是「37 implementation details」）。</p>
+<p><strong>Typical applications.</strong> 機器人控制、自駕、Dota 2/StarCraft 等大規模分散式訓練、<strong>LLM 對齊（RLHF）</strong>。</p>
+<h3 id="124-a2c-a3c-asynchronous-advantage-actor-critic">1.2.4 A2C / A3C (Asynchronous Advantage Actor-Critic)</h3>
+<p><strong>Core idea.</strong> Mnih et al., ICML 2016 <sup id="fnref:mnih2016a3c"><a class="footnote-ref" href="#fn:mnih2016a3c">5</a></sup>。同時學一個 actor $\pi_\theta$ 和一個 critic $V_\phi$，用 advantage $\hat A = R - V_\phi$ 替代 Q 來降低 policy gradient 的 variance。<strong>A3C</strong> 用多個 worker 在 CPU 上<strong>非同步</strong>地各自抓資料、各自做梯度、push 回 master；<strong>A2C</strong> 是同步版本（等所有 worker 收完一筆 batch 再一起更新），在 GPU 時代往往效果更好。</p>
+<p><strong>Advantages.</strong> 不必 replay buffer；天然支援連續動作；多 worker 也是一種探索的隱性 randomization。</p>
+<p><strong>Weaknesses.</strong> 比 PPO 不穩；缺乏 trust-region 控制；on-policy 因此 sample-inefficient。<strong>已被 PPO 取代成 baseline。</strong></p>
+<p><strong>Typical applications.</strong> 學術 baseline；多核 CPU cluster 上的大規模訓練（PPO 出現前的 Dota 等）。</p>
+<h3 id="125-sac-soft-actor-critic">1.2.5 SAC (Soft Actor-Critic)</h3>
+<p><strong>Core idea.</strong> Haarnoja et al., ICML 2018 <sup id="fnref:haarnoja2018sac"><a class="footnote-ref" href="#fn:haarnoja2018sac">6</a></sup>。把標準 RL 目標改成 <strong>maximum entropy</strong> 形式：
+$$ J(\pi) = \sum_t \mathbb{E}!\left[r(s_t, a_t) + \alpha \mathcal{H}(\pi(\cdot \mid s_t))\right]. $$
+鼓勵 policy 在所有「等好」的動作上保持熵，自然兼顧探索。架構是 off-policy actor-critic + 兩個 Q network（取 min 避免高估）。</p>
+<p><strong>Advantages.</strong> <strong>連續控制的 SOTA baseline</strong>（與 TD3 並列）；sample-efficient（off-policy）；temperature $\alpha$ 可自動調整；穩健。</p>
+<p><strong>Weaknesses.</strong> 實作比 PPO 複雜；連續動作專用（離散版本後出但較少用）；對 critic 過擬合敏感（需要 target 與 ensemble）。</p>
+<p><strong>Typical applications.</strong> 機械手臂、足式機器人、UAV、自駕。</p>
+<h3 id="126-td3-twin-delayed-ddpg">1.2.6 TD3 (Twin Delayed DDPG)</h3>
+<p><strong>Core idea.</strong> Fujimoto et al., ICML 2018 <sup id="fnref:fujimoto2018td3"><a class="footnote-ref" href="#fn:fujimoto2018td3">7</a></sup>。針對 DDPG 的 Q 值高估與不穩，提出三個技巧：
+1. <strong>Clipped Double Q-learning</strong>：兩個 critic 取 min。
+2. <strong>Delayed policy updates</strong>：critic 多更新幾步 actor 才更新一次。
+3. <strong>Target policy smoothing</strong>：在 target action 加 Gaussian noise 後 clip，避免 critic 對窄峰 over-fit。</p>
+<p><strong>Advantages.</strong> Deterministic policy 在精確控制（如手臂末端定位）上略優於 SAC；演算法純粹、無 entropy term。</p>
+<p><strong>Weaknesses.</strong> 缺乏 SAC 的自動探索能力，對 exploration noise schedule 敏感；當任務需要多模態行為時，deterministic policy 表現不如 SAC。</p>
+<p><strong>Typical applications.</strong> 連續控制；機器人精準定位；常與 SAC 並列為 baseline。</p>
+<h3 id="127-muzero">1.2.7 MuZero</h3>
+<p><strong>Core idea.</strong> Schrittwieser et al., Nature 2020 <sup id="fnref:schrittwieser2020muzero"><a class="footnote-ref" href="#fn:schrittwieser2020muzero">8</a></sup>。AlphaZero 的繼承者，<strong>但不再需要環境模型作為已知輸入</strong>——MuZero 學一個 <strong>抽象的 latent dynamics model</strong>（不直接預測 pixels，只預測對 policy/value 有用的 latent 表徵），然後在這個學到的模型裡做 MCTS。可以同時打敗 AlphaZero（圍棋/西洋棋/將棋）與 R2D2（Atari），不需要任何遊戲規則。</p>
+<p><strong>Advantages.</strong> model-based 帶來高 sample efficiency；不需手刻環境模型；同一架構征服 board games + Atari。</p>
+<p><strong>Weaknesses.</strong> 工程複雜（MCTS + 表徵學習 + reward/value prediction）；對隨機環境（如撲克）不擅長；訓練成本高。</p>
+<p><strong>Typical applications.</strong> 棋類遊戲、Atari、video compression（DeepMind 後續 paper）、推薦系統（少數產業應用）。</p>
+<h3 id="128-decision-transformer-dt">1.2.8 Decision Transformer (DT)</h3>
+<p><strong>Core idea.</strong> Chen et al., NeurIPS 2021 <sup id="fnref:chen2021dt"><a class="footnote-ref" href="#fn:chen2021dt">9</a></sup>。<strong>把 RL 重新當成序列建模問題</strong>——給定一個 trajectory $(R_1, s_1, a_1, R_2, s_2, a_2, \dots)$，用 Transformer 自迴歸地預測下一個動作。$R_t$ 是 <strong>return-to-go</strong>（從 $t$ 起的剩餘 reward 總和）；inference 時把目標 return 餵進去，agent 就「假裝自己能拿到那麼多 reward」並輸出動作。</p>
+<p><strong>Advantages.</strong> 完全不用 RL（沒有 TD、沒有 policy gradient）；天然支援 offline RL；可以受惠於 Transformer scaling laws；用 return-conditioning 做 multi-task 很自然。</p>
+<p><strong>Weaknesses.</strong> 在 <strong>stitching</strong>（從不連續的次優 trajectory 拼出最優策略）上不如 dynamic programming-based offline RL（如 CQL）；對 OOD return target 敏感；需要大量資料才打得贏 TD-based 方法。</p>
+<p><strong>Typical applications.</strong> Offline RL benchmarks、robotic learning from demonstrations、後續 Trajectory Transformer / Gato / VLA 系列的祖先。</p>
+<h3 id="129-offline-rl">1.2.9 Offline RL</h3>
+<p><strong>Core idea.</strong> 給定一個 <strong>靜態的 dataset</strong> $\mathcal{D} = {(s, a, r, s')}$（由未知 behavior policy 收集），不能再與環境互動，學一個 policy 使其表現超過 behavior。核心難題是 <strong>distribution shift</strong>：學到的 policy 在 OOD 動作上的 Q 估計沒有資料約束，會「幻想」出很高的值。</p>
+<p><strong>代表方法。</strong>
+- <strong>BCQ</strong> (Fujimoto et al., ICML 2019 <sup id="fnref:fujimoto2019bcq"><a class="footnote-ref" href="#fn:fujimoto2019bcq">10</a></sup>)：強制 policy 只選與 behavior 相近的動作。
+- <strong>CQL</strong> (Kumar et al., NeurIPS 2020 <sup id="fnref:kumar2020cql"><a class="footnote-ref" href="#fn:kumar2020cql">11</a></sup>)：在 critic loss 加 conservative penalty，明確壓低 OOD action 的 Q。
+- <strong>IQL</strong> (Kostrikov et al., ICLR 2022 <sup id="fnref:kostrikov2022iql"><a class="footnote-ref" href="#fn:kostrikov2022iql">12</a></sup>)：用 expectile regression 學 $V$，再做 advantage-weighted regression 取 policy，完全避開對 OOD 動作的 query。
+- <strong>Decision Transformer / Trajectory Transformer</strong>：序列建模路線。</p>
+<p><strong>Advantages.</strong> 不需要環境互動，適合 <strong>昂貴/不安全/不可逆</strong> 的場景（醫療、金融、自駕真實道路）。</p>
+<p><strong>Weaknesses.</strong> 上限受限於 behavior policy 覆蓋範圍；對 OOD 的處理仍是 open problem；缺少 well-established benchmark 之外的真實成功案例。</p>
+<p><strong>Typical applications.</strong> Medical AI（ICU 治療策略）、推薦系統、自駕（從 fleet 紀錄學）、機器人從 demonstration 學。</p>
+<h3 id="1210-hierarchical-rl-hrl">1.2.10 Hierarchical RL (HRL)</h3>
+<p><strong>Core idea.</strong> 把長時域決策拆成兩層：<strong>high-level policy</strong> 選擇 sub-goal 或 option（持續多個 timestep 的動作）；<strong>low-level policy</strong> 在 option 內執行 primitive actions。經典框架是 <strong>Options framework</strong> (Sutton, Precup, Singh, 1999 <sup id="fnref:sutton1999options"><a class="footnote-ref" href="#fn:sutton1999options">13</a></sup>)；現代代表如 <strong>FuN</strong> (FeUdal Networks, Vezhnevets et al., ICML 2017 <sup id="fnref:vezhnevets2017fun"><a class="footnote-ref" href="#fn:vezhnevets2017fun">14</a></sup>) 和 <strong>HIRO</strong> (Nachum et al., NeurIPS 2018 <sup id="fnref:nachum2018hiro"><a class="footnote-ref" href="#fn:nachum2018hiro">15</a></sup>)。</p>
+<p><strong>Advantages.</strong> 緩解 sparse reward 與 long-horizon credit assignment；sub-policy 可重用；天然有可解釋性（可以看到 sub-goal）。</p>
+<p><strong>Weaknesses.</strong> 怎麼自動發現 option 仍是 open problem；high-level 與 low-level 的訓練常彼此干擾；在純 end-to-end 大模型時代（如 OpenVLA、π0）反而被 flat policy 打過。</p>
+<p><strong>Typical applications.</strong> Long-horizon robotics、multi-room navigation、Minecraft 類的開放世界任務。</p>
+<hr />
+<h1 id="part-2-survey-of-drl-systems-and-platforms">Part 2 — Survey of DRL Systems and Platforms</h1>
+<p>DRL 的進步從來不是只有演算法。一個能在 <strong>單一 GPU 上每秒模擬數萬個機器人</strong> 的 simulator、一個能在 <strong>百萬時間步</strong> 內收斂的 distributed trainer，往往才是論文背後真正的決勝點。本章節整理十個現代 DRL 系統，沿四個維度做比較：<strong>系統架構 / 模擬環境 / 支援演算法 / 目標應用</strong>，並指出每個系統的優勢與限制。</p>
+<h2 id="21-nvidia-isaac-gym-isaac-sim-isaac-lab">2.1 NVIDIA Isaac Gym / Isaac Sim / Isaac Lab</h2>
+<p><strong>架構。</strong> Isaac Gym（2021 釋出）是 <strong>GPU-end-to-end</strong> 的機器人模擬器——physics simulation、observation rendering 與 RL training 全部在 GPU 上，不必走 CPU↔GPU 來回。一張 RTX 4090 可同時模擬數千到上萬個並行環境（envs），把 PPO 從「兩週」壓到「數小時」收斂。2023 年起 NVIDIA 推出 <strong>Isaac Sim</strong>（基於 Omniverse 的 photorealistic simulator）與 <strong>Isaac Lab</strong>（取代舊版 Isaac Gym 的學術用 RL 框架）；2024 年又跟 Google DeepMind、Disney 聯手發布 <strong>Newton</strong>——一個專為 robotics 設計的下一代 differentiable physics engine（建立在 NVIDIA Warp 上）。</p>
+<p><strong>支援演算法。</strong> PPO、SAC、TRPO（透過 rl_games / skrl / Stable-Baselines3 整合）；2024–2025 起 NVIDIA 大力推 <strong>Eureka / DrEureka</strong>（用 LLM 自動生成 reward function）與 <strong>GR00T</strong>（humanoid foundation model）。</p>
+<p><strong>應用。</strong> 四足機器人（ANYmal / Spot）、人形機器人（GR00T training, 1X NEO）、機械手（Allegro / Shadow Hand）、Sim2Real 的所有環節。</p>
+<p><strong>優勢。</strong> 速度無人能敵；photorealistic rendering；NVIDIA 的 GPU/CUDA 生態。<strong>限制。</strong> 對非 NVIDIA GPU 不友善；deformable / fluid 支援仍弱；學習曲線陡（Omniverse 的 USD 格式並不友善）。</p>
+<h2 id="22-habitat-lab-meta-ai">2.2 Habitat Lab (Meta AI)</h2>
+<p><strong>架構。</strong> Meta AI 開發的 <strong>embodied AI</strong> 模擬平台。Habitat-Sim 用 C++ + Bullet/Magnum 做 high-throughput rendering（10000+ FPS in headless mode），Habitat-Lab 是 Python 端的 RL/IL framework。2023 年釋出 <strong>Habitat 3.0</strong> 支援 humanoid avatar 和 human-robot interaction；2024 年 <strong>Habitat-Matterport 3D Semantics (HM3D)</strong> 提供 1000+ 棟真實住宅的 photorealistic 3D 掃描。</p>
+<p><strong>支援演算法。</strong> PPO、DD-PPO（distributed PPO）、imitation learning。</p>
+<p><strong>應用。</strong> Visual navigation（PointNav, ObjectNav, ImageNav）、language-guided navigation、mobile manipulation、social navigation。</p>
+<p><strong>優勢。</strong> <strong>室內具身導航的事實標準</strong>；rendering 與物理速度極快；資料集生態完整（MP3D、HM3D、Gibson、ReplicaCAD）。<strong>限制。</strong> 物理模擬不像 Isaac 那麼精準（足以做 navigation 但 manipulation 較弱）；以 Linux 為主。</p>
+<h2 id="23-carla">2.3 CARLA</h2>
+<p><strong>架構。</strong> 開源的都市自駕模擬器（Intel + CVC + Toyota Research），基於 Unreal Engine 4/5。提供完整的城市環境（CARLA Towns）、感測器（RGB、Depth、Lidar、Radar、IMU、GNSS）、可調節天氣、行人/車輛 NPC，以及 Python/C++ API。CARLA Leaderboard 是業界公認的端到端自駕 benchmark。</p>
+<p><strong>支援演算法。</strong> 任意 DRL 演算法（環境用 Gym/Gymnasium 包好即可）；近年大量出現基於 model-based RL（如 Latent World Models）與 imitation learning + RL hybrid 的工作。</p>
+<p><strong>應用。</strong> 自駕策略 / planning / control；多 agent driving；強化學習與規則式 planner 的對比。</p>
+<p><strong>優勢。</strong> <strong>唯一被產業界廣泛採用的開源自駕模擬器</strong>；社群活躍；CARLA Challenge 比賽提供共同 leaderboard。<strong>限制。</strong> Unreal 端 rendering 很重，難以同時跑大量 envs；sim2real gap 仍然大；CARLA scenarios 的 distribution 與真實道路不完全重疊。</p>
+<h2 id="24-unity-ml-agents">2.4 Unity ML-Agents</h2>
+<p><strong>架構。</strong> Unity 推出的開源 toolkit，讓任何 Unity 場景變成 Gym-compatible RL environment。架構分三層：<strong>Unity scene + ML-Agents C# Behavior</strong> → <strong>Python low-level API (gRPC)</strong> → <strong>mlagents-learn trainer</strong>（內建 PPO、SAC、POCA for multi-agent）。</p>
+<p><strong>應用。</strong> <strong>遊戲 AI 訓練</strong>（NPC 行為、難度調節）、教育示範、small-scale robotics（藉由 Unity Robotics Hub 整合 ROS）。</p>
+<p><strong>優勢。</strong> 對遊戲開發者最友善；3D 物件 / 動畫資產庫巨大；跨平台部署。<strong>限制。</strong> 物理模擬不及 Isaac/MuJoCo；trainer 不及 RLlib 強大；不適合大規模 distributed training。</p>
+<h2 id="25-ray-rllib">2.5 Ray RLlib</h2>
+<p><strong>架構。</strong> UC Berkeley RISELab → Anyscale 商業化。建構在 <strong>Ray</strong> distributed computing 上，提供 <strong>rollout workers / learner workers / replay buffer</strong> 抽象，能輕鬆從單機擴到上千 CPU/GPU。內建超過 30 種演算法的官方實作（PPO, IMPALA, APPO, SAC, DQN, DDPG, MARL 等）。</p>
+<p><strong>應用。</strong> 產業界的大規模 DRL 訓練；推薦系統、game AI、廣告 bidding；Anyscale 是目前最完整的 commercial DRL platform。</p>
+<p><strong>優勢。</strong> <strong>scalability 一流</strong>；演算法選擇齊全；產業級維護。<strong>限制。</strong> 抽象多、API 學習曲線陡；2.x → 3.x 大改動讓社群一度抱怨穩定性；單機快速實驗反而不如 SB3 / CleanRL 順手。</p>
+<h2 id="26-stable-baselines3-sb3">2.6 Stable-Baselines3 (SB3)</h2>
+<p><strong>架構。</strong> PyTorch 重寫的 Stable-Baselines（OpenAI Baselines 的 fork）。設計哲學是 <strong>single-machine、可讀性優先、reproducibility 優先</strong>。提供 PPO、A2C、DQN、SAC、TD3、DDPG 等核心演算法，所有 baseline benchmark 與 hyperparameter 公開在 <strong>rl-baselines3-zoo</strong>。</p>
+<p><strong>應用。</strong> 研究 baseline、教學、小型產業 prototyping。</p>
+<p><strong>優勢。</strong> <strong>學術界最被引用的 PyTorch DRL 庫</strong>；文件完整；rl-zoo 提供了 100+ 個調好的 hyperparameter set。<strong>限制。</strong> 不支援 distributed training（單 GPU + 多 env 上限）；演算法保守（不追新 SOTA 如 DreamerV3）。</p>
+<h2 id="27-finrl-ai4finance-foundation">2.7 FinRL (AI4Finance Foundation)</h2>
+<p><strong>架構。</strong> 哥倫比亞大學 Xiao-Yang Liu 團隊主導的開源金融 DRL 框架。三層架構：<strong>FinRL-Meta</strong>（金融資料 + 環境）→ <strong>FinRL</strong> （演算法層，基於 SB3 / ElegantRL / RLlib）→ <strong>FinRL-Tutorials</strong>（範例）。2024 年釋出 <strong>FinRL-DeepSeek</strong> 結合 LLM signal 與 DRL trader。</p>
+<p><strong>應用。</strong> 股票 / 加密貨幣 / 期貨的演算法交易、portfolio optimization、market making、order execution。</p>
+<p><strong>優勢。</strong> <strong>唯一被廣泛採用的金融專用 DRL 框架</strong>；提供 trading environments、tutorials、leaderboard；活躍維護。<strong>限制。</strong> 真實金融市場的 non-stationarity 讓 sim-trained policy 難以泛化；論文中的 outperformance 在實盤常打折扣。</p>
+<h2 id="28-minedojo-nvidia">2.8 MineDojo (NVIDIA + 學術界)</h2>
+<p><strong>架構。</strong> Fan et al., NeurIPS 2022 <sup id="fnref:fan2022minedojo"><a class="footnote-ref" href="#fn:fan2022minedojo">16</a></sup>。在 Minecraft 之上建造的 open-ended embodied agent benchmark。三大資產：
+1. <strong>Simulator</strong>（基於 MineRL，提供 thousands of 任務）；
+2. <strong>資料集</strong>：730k YouTube 影片 + 7000+ Wiki 頁 + 340k Reddit posts；
+3. <strong>基礎模型 MineCLIP</strong>：對齊 Minecraft 影片與文字描述。</p>
+<p><strong>應用。</strong> Voyager (Wang et al., NeurIPS 2023 <sup id="fnref:wang2023voyager"><a class="footnote-ref" href="#fn:wang2023voyager">17</a></sup>) 在此上面驗證 LLM-driven lifelong learning；後續 GITM、JARVIS-1 等基於 MineDojo 做評估。</p>
+<p><strong>優勢。</strong> <strong>目前唯一規模化的開放世界 embodied benchmark</strong>；任務多樣性 + 海量 unlabeled video；極適合驗證 foundation agents。<strong>限制。</strong> Minecraft 本身的視覺/物理與真實世界差距大；setup 複雜（需要 Java + Mod 環境）。</p>
+<h2 id="29-openvla-stanford-google-deepmind-toyota-research-2024">2.9 OpenVLA (Stanford + Google DeepMind + Toyota Research, 2024)</h2>
+<p><strong>架構。</strong> Kim et al., 2024 <sup id="fnref:kim2024openvla"><a class="footnote-ref" href="#fn:kim2024openvla">18</a></sup>。<strong>開源 Vision-Language-Action foundation model</strong>，7B 參數，在 Open X-Embodiment 970k+ robot trajectory 上微調 Llama 2 + DINOv2/SigLIP visual encoder。輸出是 tokenized 7-DoF action sequence。</p>
+<p><strong>支援演算法。</strong> Primarily imitation learning + behavior cloning；可用 RL fine-tune（後續工作如 RLDP、PARL）。</p>
+<p><strong>應用。</strong> Multi-embodiment manipulation; benchmark 在 BridgeData-V2、LIBERO 等。</p>
+<p><strong>優勢。</strong> <strong>首個 open-weights VLA</strong>，打破 RT-2 的閉源壟斷；參數量適中（消費級 GPU 可微調）。<strong>限制。</strong> 在新 embodiment 上仍需 demonstration fine-tuning；推論 latency 對 high-frequency control 是挑戰；缺乏線上 RL 機制。</p>
+<h2 id="210-microsoft-airsim-project-airsim">2.10 Microsoft AirSim / Project AirSim</h2>
+<p><strong>架構。</strong> Microsoft Research 的開源無人機/車輛模擬器，建構在 Unreal Engine 上。提供 photorealistic environments、physics-based flight dynamics 與 multiple sensor modalities。<strong>注意</strong>：原 AirSim repo 已 archived（2022 年底），Microsoft 把後續開發轉到商業化的 <strong>Project AirSim</strong>（基於 Azure cloud）。社群 fork <strong>Cosys-AirSim</strong> 繼續維護開源版。</p>
+<p><strong>應用。</strong> UAV 自主飛行訓練、深度視覺 + RL 控制、CV pipeline 測試。</p>
+<p><strong>優勢。</strong> <strong>學術界 UAV RL 的主要實驗平台</strong>；豐富感測器；Multi-vehicle 支援。<strong>限制。</strong> 已停止官方開源維護是隱患；對沒用過 Unreal 的人 setup 不容易；rendering throughput 限制大規模並行訓練。</p>
+<hr />
+<h2 id="211">2.11 比較表</h2>
+<table>
+p{3.6cm}p{3.2cm}p{3.6cm}}
+
+<tr><td>**平台**</td><td>**主要 simulator / 環境**</td><td>**支援演算法**</td><td>**目標應用**</td></tr>
+
+<tr><td>Isaac Lab / Sim</td><td>GPU end-to-end physics + photorealistic</td><td>PPO/SAC + Eureka, GR00T</td><td>Humanoid / 機械手 / quadruped</td></tr>
+<tr><td>Habitat 3.0</td><td>Photoreal 室內 3D 掃描 (HM3D)</td><td>PPO / DD-PPO / IL</td><td>室內具身導航 + HRI</td></tr>
+<tr><td>CARLA</td><td>Unreal-based 城市駕駛</td><td>任意 DRL (Gym API) + IL</td><td>自駕、planning</td></tr>
+<tr><td>Unity ML-Agents</td><td>任意 Unity 場景</td><td>PPO / SAC / POCA</td><td>遊戲 AI、教學</td></tr>
+<tr><td>RLlib</td><td>任意 Gym 環境 (Ray cluster)</td><td>30+ 演算法 (含 MARL)</td><td>大規模產業 DRL</td></tr>
+<tr><td>Stable-Baselines3</td><td>任意 Gym 環境 (單機)</td><td>PPO / SAC / TD3 / DQN ...</td><td>研究 baseline、教學</td></tr>
+<tr><td>FinRL</td><td>金融資料 (股票/加密)</td><td>透過 SB3/RLlib/ElegantRL</td><td>演算法交易、portfolio</td></tr>
+<tr><td>MineDojo</td><td>Minecraft + 多模態資料</td><td>任意 + LLM agent</td><td>開放世界 / 終身學習</td></tr>
+<tr><td>OpenVLA</td><td>Open X-Embodiment 資料集</td><td>IL（可 RL fine-tune）</td><td>多 embodiment manipulation</td></tr>
+<tr><td>AirSim</td><td>Unreal 無人機 / 車輛</td><td>任意 DRL (Gym API)</td><td>UAV、autonomous driving</td></tr>
+
+
+</table>
+
+<hr />
+<h1 id="part-3-agentic-ai-and-autonomous-agents">Part 3 — Agentic AI and Autonomous Agents</h1>
+<p>DRL 在 2024–2026 最大的「身分轉換」是：<strong>它從一個獨立的 sub-field，變成了大型模型（LLM/VLM）系統裡的一個 alignment + reasoning 元件</strong>。本章梳理 LLM agents、RLHF / RLAIF、tool-using、multi-agent、self-improving、memory 等六個面向，最後討論 DRL 如何被融入 agentic AI、以及對 AGI 的影響。</p>
+<h2 id="31-llm-agents">3.1 LLM Agents — 三大產品堆疊</h2>
+<h3 id="311-openai-agent-stack">3.1.1 OpenAI Agent Stack</h3>
+<ul>
+<li><strong>Computer-Using Agent (CUA) / Operator</strong>（2025 Jan）：GPT-4o vision 模型 + RL 訓練的 CUA，能在瀏覽器中點擊、輸入、滾動；2025 升級到 o3-based 版本，加入 self-correction loop 與遇到不確定時主動 hand-back 給用戶。</li>
+<li><strong>Deep Research</strong>（2025 Feb）：以 o3 為核心的多步研究 agent，能瀏覽網頁、彙整資訊、撰寫長報告；以 RL on research-task verifiers 訓練。</li>
+<li><strong>GPT-5 / 5.2 / 5.5</strong>（2025 Aug–Dec）：「Steerable, collaborative」agentic mode；SWE-bench Verified 74.9%、Aider Polyglot 88%；GPT-5.5 在 agentic coding bench 達 82.7%。</li>
+<li><strong>Open problem</strong>：UC Berkeley CRDI 在 2026 Apr 公開能自動 reward-hack 全部八個主流 agent benchmark 的攻擊 agent — 整個評估體系正在被質疑。</li>
+</ul>
+<h3 id="312-anthropic-agent-stack">3.1.2 Anthropic Agent Stack</h3>
+<ul>
+<li><strong>Claude Computer Use</strong>（2024 Oct）：以 screenshot 為輸入、tool API 為輸出的 GUI 控制。</li>
+<li><strong>Model Context Protocol (MCP)</strong>（2024 Nov）：開放的 JSON-RPC 2.0 標準（設計受 LSP 啟發），讓 LLM 以統一 schema 連結工具與資料源。<strong>到 2025 Dec 月下載量達 9700 萬</strong>；Anthropic 已將其捐贈給新成立的 Linux Foundation Agentic AI Foundation（與 Block、OpenAI 共同創立）<sup id="fnref:anthropic2025mcp"><a class="footnote-ref" href="#fn:anthropic2025mcp">19</a></sup>。</li>
+<li><strong>Claude Code</strong>（2024–2026）：terminal-resident 的 agentic coding 工具，採 single-threaded master loop + 細粒度 permission system + 工具層（Read / Glob / Grep / Edit / Bash）；新版引入 multi-agent 分解（planner / executor / debugger / validator）。</li>
+<li><strong>Claude Skills</strong>（2025）：以「Skill 包」（檔案集合）為單位的能力註冊與調用。</li>
+</ul>
+<h3 id="313-google-agent-stack">3.1.3 Google Agent Stack</h3>
+<ul>
+<li><strong>Project Astra</strong>（2024 Dec → I/O 2025）：跨裝置（手機 + 原型眼鏡）的 multimodal 助理，session memory 約 10 分鐘。</li>
+<li><strong>Project Mariner</strong>（2024 Dec → I/O 2025）：Gemini 2.5 Pro 驅動的 web agent，可同時跑 <strong>10 個 parallel task</strong>，整合進 AI Mode 做預訂、查詢。</li>
+<li><strong>Gemini 2.5 Pro / Deep Think</strong>：擴充為「world model」做 planning 與 imagined-experience simulation。</li>
+</ul>
+<h3 id="314-orchestration-frameworks">3.1.4 Orchestration Frameworks</h3>
+<table>
+<thead>
+<tr>
+<th>框架</th>
+<th>模型</th>
+<th>特色</th>
+<th>適用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>LangGraph</strong> v1.0（2025）</td>
+<td>任意</td>
+<td>Stateful graph + conditional edges；LangChain 預設 runtime</td>
+<td>產業 audit 與穩定性</td>
+</tr>
+<tr>
+<td><strong>CrewAI</strong></td>
+<td>任意</td>
+<td>Role-based crews；2025 取得 $18M A 輪，宣稱 60% 財富 500 大使用</td>
+<td>中型企業 workflow</td>
+</tr>
+<tr>
+<td><strong>Microsoft Agent Framework</strong>（2025 Oct 由 AutoGen 與 Semantic Kernel 合併，2026 Q1 GA）</td>
+<td>任意</td>
+<td>GroupChat conversational pattern</td>
+<td>Azure 生態</td>
+</tr>
+<tr>
+<td><strong>AutoGPT / BabyAGI</strong> lineage</td>
+<td>GPT-4 系列</td>
+<td>概念先驅，已大致被 graph-based 框架取代</td>
+<td>教學示範</td>
+</tr>
+</tbody>
+</table>
+<h2 id="32-rlhf-rlaif">3.2 RLHF / RLAIF — 對齊的演算法</h2>
+<h3 id="321-dpo">3.2.1 直接偏好最佳化（DPO 系列）</h3>
+<ul>
+<li><strong>DPO</strong>（Rafailov et al., NeurIPS 2023 <sup id="fnref:rafailov2023dpo"><a class="footnote-ref" href="#fn:rafailov2023dpo">20</a></sup>）：用一個閉式映射把 reward 模型「吸收」進 policy，pairwise preference loss 可直接訓 policy — 不需要 RM、不需要 online sampling，匹配甚至超越 PPO-RLHF。</li>
+<li><strong>IPO</strong>（Azar et al., AISTATS 2024）：用 bounded objective 取代 Bradley-Terry，修正 DPO 在 deterministic preference 上的 unbounded margin 發散，OOD 泛化更好。</li>
+<li><strong>KTO</strong>（Ethayarajh et al., ICML 2024 spotlight <sup id="fnref:ethayarajh2024kto"><a class="footnote-ref" href="#fn:ethayarajh2024kto">21</a></sup>）：用 prospect theory 的 utility maximization，<strong>只需要「好 / 壞」二元標籤</strong>，標註成本遠低於 pairwise；在大模型上匹配 DPO。</li>
+</ul>
+<h3 id="322-constitutional-ai-rlaif">3.2.2 Constitutional AI / RLAIF</h3>
+<ul>
+<li><strong>Constitutional AI</strong>（Bai et al., Anthropic 2022 <sup id="fnref:bai2022constitutional"><a class="footnote-ref" href="#fn:bai2022constitutional">22</a></sup>）：兩階段 — (1) SL：以「constitution」為原則做 self-critique + revise；(2) RL：以 AI 生成的偏好標籤訓練偏好模型再做 RLHF。<strong>「RLAIF」一詞由此而來</strong>。</li>
+<li><strong>RLAIF vs RLHF</strong>（Lee et al., Google, ICML 2024 <sup id="fnref:lee2024rlaif"><a class="footnote-ref" href="#fn:lee2024rlaif">23</a></sup>）：在 summarization、helpful + harmless dialogue 上 RLAIF ≈ RLHF；AI labeler 大小不必超過 policy；<strong>d-RLAIF</strong>（off-the-shelf LLM 直接給 reward，跳過 RM）反而打敗 canonical RLAIF。</li>
+<li><strong>Open problem</strong>：相同家族 labeler 帶來的 sycophancy；對抗 prompt 下 constitutional principles 仍易崩（「Constitution or Collapse?」arXiv:2504.04918）。</li>
+</ul>
+<h3 id="323-rl-prm-orm-rlvr">3.2.3 推理 RL — PRM / ORM / RLVR</h3>
+<ul>
+<li><strong>Process Reward Models (PRM)</strong>（Lightman et al., OpenAI ICLR 2024 <sup id="fnref:lightman2024verify"><a class="footnote-ref" href="#fn:lightman2024verify">24</a></sup>）：每一步給 reward 比只給最終結果（ORM）更有效；釋出 PRM800K（800k step-level 標籤），在 MATH 子集達 78% 解題率。</li>
+<li><strong>DeepSeek-R1</strong>（Guo et al., <strong>Nature 2025</strong>，首篇 peer-reviewed LLM Nature <sup id="fnref:deepseek2025r1"><a class="footnote-ref" href="#fn:deepseek2025r1">25</a></sup>）：純 RL with <strong>verifiable rewards</strong> — 數學以符號驗證、程式碼以單元測試。提出 <strong>GRPO</strong>（Group Relative Policy Optimization）取消 critic、以 group 內 K 個樣本的 advantage 標準化取代之；以 ~147K H800 GPU-hr（比 o1 級便宜約 10 倍）達到 o1 等級推理能力。</li>
+<li><strong>OpenAI o1 / o3</strong>（2024 Sep / 2025）：RL 訓練 long-CoT；提出 <strong>inference-time scaling law</strong> — 表現同時隨 train-time RL 計算與 test-time thinking budget 增長。</li>
+<li><strong>RLVR 理論</strong>（arXiv:2506.14245）：RLVR 不只是提高「能 sample 出正確 CoT 的機率」，而是<strong>擴展推理邊界</strong>；提出 CoT-Pass@K 指標。</li>
+<li><strong>Open problem</strong>：reward over-optimization；narrow verifier；數學/程式碼 RL 難以 transfer 到開放性推理（「Crossing the Reward Bridge」arXiv:2503.23829）。</li>
+</ul>
+<h2 id="33-tool-using-function-calling-agents">3.3 Tool-using / Function-calling Agents</h2>
+<ul>
+<li><strong>ReAct</strong>（Yao et al., ICLR 2023 <sup id="fnref:yao2023react"><a class="footnote-ref" href="#fn:yao2023react">26</a></sup>）：把 reasoning 與 acting 交錯生成（<code>Thought → Action → Observation</code> loop），是後續所有 agent loop 的 baseline。</li>
+<li><strong>Toolformer</strong>（Schick et al., NeurIPS 2023）：自監督地在 pretraining 中插入 API call token，學「何時該叫 tool」。</li>
+<li><strong>Gorilla</strong>（Patil et al., NeurIPS 2024 <sup id="fnref:patil2024gorilla"><a class="footnote-ref" href="#fn:patil2024gorilla">27</a></sup>）：微調 LLaMA 在 1600+ API 中做 API 選擇；衍生 Berkeley Function Calling Leaderboard (BFCL v4，含 agentic / multi-hop / error recovery 多項)。</li>
+<li><strong>ToolACE</strong>（ICLR 2025）：自動合成 tool-use 資料的 pipeline，BFCL SOTA。</li>
+</ul>
+<h3 id="331-agent-benchmarks">3.3.1 Agent Benchmarks</h3>
+<table>
+<thead>
+<tr>
+<th>Benchmark</th>
+<th>任務數 / 範圍</th>
+<th>當前 SOTA</th>
+<th>特性</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>SWE-bench / Verified</strong>（ICLR 2024）</td>
+<td>2,294 真實 GitHub issue</td>
+<td>~75–82%（GPT-5/5.5）</td>
+<td>Execution-based</td>
+</tr>
+<tr>
+<td><strong>GAIA</strong>（Meta, ICLR 2024）</td>
+<td>多工具複合題</td>
+<td>--</td>
+<td>單一 ground truth</td>
+</tr>
+<tr>
+<td><strong>AgentBench</strong>（ICLR 2024）</td>
+<td>8 環境（OS/DB/KG/...）</td>
+<td>--</td>
+<td>廣 coverage</td>
+</tr>
+<tr>
+<td><strong>WebArena</strong>（ICLR 2024）</td>
+<td>812 長時域 web task</td>
+<td>14.4% → 61.7%（IBM CUGA, 2025）</td>
+<td>真實 web 環境</td>
+</tr>
+<tr>
+<td><strong>OSWorld</strong>（NeurIPS 2024）</td>
+<td>369 跨 app real-OS task</td>
+<td>~60pt 人類落差</td>
+<td>真實 OS</td>
+</tr>
+<tr>
+<td><strong>τ-bench</strong>（Sierra/Yao, 2024）</td>
+<td>Reliability：pass^k</td>
+<td>--</td>
+<td>揭露一致性問題</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Open problem</strong>：UC Berkeley CRDI 2026 Apr 公布能自動破解全部八個主流 benchmark 的 reward-hacking agent — 整個評估典範面臨重建。</p>
+<h2 id="34-multi-agent-collaboration">3.4 Multi-Agent Collaboration</h2>
+<ul>
+<li><strong>Generative Agents</strong>（Park et al., Stanford, UIST 2023 <sup id="fnref:park2023generative"><a class="footnote-ref" href="#fn:park2023generative">28</a></sup>）：25 個 simulacra 在沙盒小鎮中以「observe + reflect + plan + 記憶流」互動，產生 emergent 社會行為（自發辦派對、傳八卦）。</li>
+<li><strong>CAMEL</strong>（Li et al., NeurIPS 2023）：「inception prompting」讓兩個 LLM 扮演 user / assistant 對話自我引導；生成 AI Society + Code datasets。</li>
+<li><strong>MetaGPT</strong>（Hong et al., ICLR 2024 oral <sup id="fnref:hong2024metagpt"><a class="footnote-ref" href="#fn:hong2024metagpt">29</a></sup>）：把軟體開發 SOP 指派給 agent role（PM / Architect / Engineer / QA），釋出時程式碼 Pass@1 達 85.9 / 87.7。</li>
+<li><strong>ChatDev</strong>（Qian et al., ACL 2024）：CEO / CTO / Programmer / Tester 的「waterfall 軟體公司」。</li>
+<li><strong>AutoGen</strong>（Wu et al., ICLR 2024 workshop / COLM 2024）：比 MetaGPT/ChatDev 更靈活的 GroupChat。</li>
+</ul>
+<h3 id="341-marlclassical-multi-agent-rl">3.4.1 MARL（classical multi-agent RL）</h3>
+<ul>
+<li>2024 surveys（Sci. Direct S2949855424000042、arXiv:2412.21088）：合作型 MARL 仍由 CTDE 家族（QMIX / MAPPO）主導；open problem 是 curse of dimensionality、non-stationarity、跨異質 reward/state/action 空間的 multi-task 規模化。</li>
+<li><strong>LLM agent + MARL 的融合是個 open frontier</strong> — LLM agent 缺乏 MARL 的 credit assignment 形式化；MARL 缺乏 LLM agent 的泛化能力。</li>
+</ul>
+<h2 id="35-foundation-agents-self-improving-agents">3.5 Foundation Agents / Self-improving Agents</h2>
+<ul>
+<li><strong>SIMA</strong>（DeepMind, 2024 Mar <sup id="fnref:deepmind2024sima"><a class="footnote-ref" href="#fn:deepmind2024sima">30</a></sup>）：跨多款商業 3D 遊戲用 keyboard/mouse 通用介面操作的 generalist agent；以 language instruction 觸發；首次達 31% 人類相對成功率。<strong>SIMA 2</strong>（2025 Nov）：用 Gemini 驅動，成功率約 v1 的兩倍，在訓練過環境近人類，能 transfer 到未見過遊戲。</li>
+<li><strong>Magma</strong>（Microsoft, CVPR 2025 <sup id="fnref:magma2025"><a class="footnote-ref" href="#fn:magma2025">31</a></sup>）：foundation model 同時處理 digital UI 與 physical robot；提出 Set-of-Mark (SoM) 做 action grounding、Trace-of-Mark (ToM) 做 action planning，在 UI navigation 與 robot manipulation 上 SOTA。</li>
+<li><strong>STaR</strong>（Zelikman et al., NeurIPS 2022）：Bootstrap rationales — 生成 → 以正確答案濾 → fine-tune；所有後續 rationale RL 的祖先。</li>
+<li><strong>Self-Rewarding LMs</strong>（Yuan et al., Meta/NYU, ICML 2024 <sup id="fnref:yuan2024selfrewarding"><a class="footnote-ref" href="#fn:yuan2024selfrewarding">32</a></sup>）：模型同時當 generator 與 LLM-as-judge，做迭代 DPO；instruction following 與 reward giving 一起進步。</li>
+<li><strong>Meta-Rewarding LMs</strong>（Wu et al., arXiv:2407.19594）：再加一層 meta-judge 降低 judge bias。</li>
+<li><strong>Open problem</strong>：多輪 self-iteration 後的 reward model collapse；缺外部 verifier 時的 grounding。</li>
+</ul>
+<h2 id="36-memory-systems">3.6 Memory Systems</h2>
+<table>
+<thead>
+<tr>
+<th>路線</th>
+<th>代表</th>
+<th>優勢</th>
+<th>限制</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Long context (1M+ tokens)</strong></td>
+<td>Gemini 1.5/2.5、Claude 200K–1M</td>
+<td>簡單、不需新架構</td>
+<td>推論貴；needle-in-haystack 深度效能下滑</td>
+</tr>
+<tr>
+<td><strong>RAG</strong></td>
+<td>Llama-Index、LangChain RAG</td>
+<td>標準外部知識 baseline</td>
+<td>multi-hop / temporal update 表現差</td>
+</tr>
+<tr>
+<td><strong>MemGPT / Letta</strong>（Packer et al., 2023 <sup id="fnref:packer2023memgpt"><a class="footnote-ref" href="#fn:packer2023memgpt">33</a></sup>）</td>
+<td>OS-style 階層記憶（core / recall / archival），LLM 用 page-in/out 函式</td>
+<td>長文件 QA、多 session chat</td>
+<td>需手刻 paging 邏輯</td>
+</tr>
+<tr>
+<td><strong>Generative-agent memory</strong>（Park 2023）</td>
+<td>Memory stream + recency/importance/relevance retrieval + reflection</td>
+<td>模擬 episodic memory</td>
+<td>規模化困難</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Open problem</strong>：缺乏 episodic vs semantic 的標準 benchmark；long-context scaling law vs 結構化檢索的 trade-off 未解；遺忘 / consolidation 政策無共識。</p>
+<h2 id="37-drl-agentic-ai">3.7 DRL 與 Agentic AI 的整合</h2>
+<h3 id="371-drl-llm-agent">3.7.1 DRL 在 LLM agent 中的角色</h3>
+<ol>
+<li><strong>對齊（alignment）</strong>：PPO/GRPO + RLHF/RLAIF/RLVR 是把 base model 變成 helpful + harmless + honest 助理的核心。</li>
+<li><strong>推理（reasoning）</strong>：o1 / DeepSeek-R1 證明 RL 能放大 LLM 內隱的推理路徑分布，<strong>inference-time compute 與 train-time RL 是新 scaling axis</strong>。</li>
+<li><strong>規劃（planning）</strong>：MuZero-style 的 model-based planning 開始與 LLM 結合（如 Tree-of-Thoughts、AlphaProof）。</li>
+<li><strong>工具使用（tool use）</strong>：偏好 / 結果 reward 訓 agent 選對工具（Gorilla, ToolACE）。</li>
+<li><strong>多 agent 競合</strong>：marketplace / debate / negotiation 用 self-play 風格 RL 訓練。</li>
+</ol>
+<h3 id="372">3.7.2 規劃與決策機制</h3>
+<ul>
+<li><strong>靜態 chain-of-thought</strong>：最簡單，但無法回頭。</li>
+<li><strong>Tree-of-Thoughts / Graph-of-Thoughts</strong>：明確 search，可重訪 node。</li>
+<li><strong>ReAct loop</strong>：感知 + 行動交錯，每一步看到 env feedback。</li>
+<li><strong>MCTS-style with learned value</strong>（如 AlphaProof）：LLM 提案、value model 評分、search expansion。</li>
+<li><strong>Plan-then-execute</strong>：先全局規劃再分配給 sub-agent（CrewAI、MetaGPT）。</li>
+</ul>
+<h3 id="373">3.7.3 人類回饋與對齊</h3>
+<p>從 InstructGPT 開始，<strong>RLHF → DPO → KTO → RLAIF → RLVR</strong> 這條演化路徑反映兩個趨勢：(a) <strong>降低人類標註成本</strong>（pairwise → binary → AI labels → verifier）；(b) <strong>轉向可驗證信號</strong>（從主觀偏好到客觀 ground truth）。下一步是 <strong>process-aware reward</strong> 與 <strong>verifier 之外的泛化</strong>（如何把數學 RL 學到的推理 transfer 到開放性問題）。</p>
+<h3 id="374-agi">3.7.4 通往 AGI 的方向</h3>
+<p>2025–2026 各家路線收斂在三條軸線上：
+- <strong>通用性（generality）</strong>：foundation agent 跨任務、跨 embodiment、跨 modality（GR00T、Magma、SIMA 2、Gemini Robotics）。
+- <strong>自主性（autonomy）</strong>：long-horizon agent 能維持多小時/多天目標，不需要人類每步監督（Deep Research、Project Mariner）。
+- <strong>可驗證學習（verifiable learning）</strong>：以 RL on verifiable rewards 持續 self-improve（DeepSeek-R1、Self-Rewarding LMs）。</p>
+<p><strong>Critical view.</strong> 雖然進展驚人，但 (1) <strong>reliability gap</strong> 仍大（τ-bench 顯示重複跑同一任務的一致性低）、(2) <strong>benchmark gaming</strong> 威脅整個 evaluation 典範、(3) memory 沒有共識解、(4) 真正的 long-term autonomous self-improvement 仍未被 demo。AGI 不是「規模再大一點」就會到，當前 agentic AI 距離真正的 autonomous artificial general intelligence 仍有顯著 gap。</p>
+<hr />
+<h1 id="part-4-drl-applications-in-different-research-domains">Part 4 — DRL Applications in Different Research Domains</h1>
+<p>本章選擇三個 2024–2026 進展最快、最能反映 DRL 與 foundation models 整合的應用領域，逐一分析：(a) <strong>問題定義</strong>、(b) <strong>為什麼 DRL 有用</strong>、(c) <strong>SOTA 系統</strong>、(d) <strong>代表論文與分析</strong>、(e) <strong>資料集 / simulator</strong>、(f) <strong>未來方向</strong>。</p>
+<h2 id="41-robotics-embodied-ai">4.1 Robotics 與 Embodied AI</h2>
+<h3 id="411">4.1.1 問題定義</h3>
+<p>Robotics 涵蓋 humanoid locomotion、bimanual manipulation、mobile manipulation、HRI 等子任務。Embodied AI 進一步要求 agent 在具身（embodied）的感知 → 推理 → 行動迴圈中與環境互動，常見任務是 navigation、object rearrangement、language-instructed manipulation。這是一個 high-dim continuous control + partial observability + long horizon + sparse reward 同時存在的任務家族。</p>
+<h3 id="412-drl">4.1.2 為什麼 DRL 有用</h3>
+<ul>
+<li><strong>高維連續控制</strong>：對 humanoid 而言一次決策要輸出 30–60 維 torque/joint position，超出傳統 MPC 即時可解的範圍；off-policy DRL（SAC、TD3）與 on-policy（PPO + 大量並行 envs）能直接 end-to-end 學。</li>
+<li><strong>泛化性</strong>：用 randomization 訓出的 policy 可以橫跨數千個變體；imitation learning 雖然準，但對新場景的 fallback 不如 RL。</li>
+<li><strong>與 foundation model 互補</strong>：VLM 提供高層 semantic（這是什麼物件、目標在哪），RL/IL 提供低層 reactive control（如何接觸、力道多大）。</li>
+</ul>
+<h3 id="413-sota-20242026">4.1.3 SOTA 系統（2024–2026）</h3>
+<table>
+<thead>
+<tr>
+<th>類別</th>
+<th>代表系統</th>
+<th>年份</th>
+<th>機構</th>
+<th>一句話</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>VLA Foundation Model</strong></td>
+<td><strong>OpenVLA</strong> <sup id="fnref2:kim2024openvla"><a class="footnote-ref" href="#fn:kim2024openvla">18</a></sup></td>
+<td>2024</td>
+<td>Stanford+Berkeley+TRI+DeepMind+PI</td>
+<td>第一個 open-weights VLA；7B params；+20.4% over Diffusion Policy</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>π0 / π0-FAST / π0.5</strong> <sup id="fnref:pi2024pi0"><a class="footnote-ref" href="#fn:pi2024pi0">34</a></sup></td>
+<td>2024–25</td>
+<td>Physical Intelligence</td>
+<td>flow-matching 50 Hz；π0.5 能清掃「<strong>完全沒見過的廚房</strong>」</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>Helix</strong> <sup id="fnref:figure2025helix"><a class="footnote-ref" href="#fn:figure2025helix">35</a></sup></td>
+<td>2025</td>
+<td>Figure AI</td>
+<td><strong>dual-process</strong> S2 (7-9 Hz VLM) + S1 (200 Hz visuomotor)</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>GR00T N1</strong> <sup id="fnref:nvidia2025groot"><a class="footnote-ref" href="#fn:nvidia2025groot">36</a></sup></td>
+<td>2025</td>
+<td>NVIDIA</td>
+<td>首個 open humanoid FM；63.9 ms latency on L40</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>Gemini Robotics / 1.5</strong> <sup id="fnref:deepmind2025geminirobotics"><a class="footnote-ref" href="#fn:deepmind2025geminirobotics">37</a></sup></td>
+<td>2025</td>
+<td>Google DeepMind</td>
+<td>驅動 Apptronik Apollo；加入 agentic tool use</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>Magma</strong> <sup id="fnref2:magma2025"><a class="footnote-ref" href="#fn:magma2025">31</a></sup></td>
+<td>2025</td>
+<td>Microsoft</td>
+<td>同時做 digital UI + physical manipulation</td>
+</tr>
+<tr>
+<td><strong>Imitation / Diffusion Policy</strong></td>
+<td><strong>Diffusion Policy</strong> <sup id="fnref:chi2023dp"><a class="footnote-ref" href="#fn:chi2023dp">38</a></sup></td>
+<td>2023</td>
+<td>Columbia</td>
+<td>conditional denoising 處理 multimodal action；+46.9% over prior SOTA</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>DP3 (3D)</strong> <sup id="fnref:ze2024dp3"><a class="footnote-ref" href="#fn:ze2024dp3">39</a></sup></td>
+<td>2024</td>
+<td>Stanford</td>
+<td>point cloud + diffusion；40 demo 達 85% real success</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>Mobile ALOHA</strong></td>
+<td>2024</td>
+<td>Stanford</td>
+<td>$32k 雙臂全身 teleop；做飯、清潔</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>Octo / CrossFormer</strong> <sup id="fnref:team2024octo"><a class="footnote-ref" href="#fn:team2024octo">40</a></sup></td>
+<td>2024</td>
+<td>Berkeley</td>
+<td>開源 800k OXE transformer；單一 model 多 embodiment</td>
+</tr>
+<tr>
+<td><strong>RL on Real Robot</strong></td>
+<td><strong>Eureka / DrEureka</strong> <sup id="fnref:ma2024eureka"><a class="footnote-ref" href="#fn:ma2024eureka">41</a></sup></td>
+<td>2024</td>
+<td>NVIDIA+UPenn</td>
+<td>LLM 寫 reward function；80%+ 任務超越人工</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>SERL</strong> <sup id="fnref:luo2024serl"><a class="footnote-ref" href="#fn:luo2024serl">42</a></sup></td>
+<td>2024</td>
+<td>Berkeley</td>
+<td>real-world RL 25–50 分鐘訓出 PCB / 線材組裝</td>
+</tr>
+<tr>
+<td><strong>Humanoid WBC</strong></td>
+<td><strong>HumanPlus</strong></td>
+<td>2024</td>
+<td>Stanford</td>
+<td>RGB 影片 shadowing</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>OmniH2O</strong> <sup id="fnref:he2024omniH2O"><a class="footnote-ref" href="#fn:he2024omniH2O">43</a></sup></td>
+<td>2024</td>
+<td>CMU LeCAR</td>
+<td>VR + voice + RGB；GPT-4 autonomy</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>ASAP</strong> <sup id="fnref:he2025asap"><a class="footnote-ref" href="#fn:he2025asap">44</a></sup></td>
+<td>2025</td>
+<td>CMU+NVIDIA</td>
+<td>sim-pretrain + delta-action residual 補 sim2real</td>
+</tr>
+<tr>
+<td><strong>快速 RL on G1</strong></td>
+<td>arXiv:2512.01996</td>
+<td>2025</td>
+<td>UC Berkeley</td>
+<td>RTX 4090 上 15 min 訓出 Unitree G1 locomotion</td>
+</tr>
+</tbody>
+</table>
+<h3 id="414">4.1.4 代表性論文分析</h3>
+<p><strong>OpenVLA (2024)</strong> 重要性在於<strong>打破 RT-2 的閉源壟斷</strong>。Stanford 用 Llama 2 + SigLIP/DINOv2 在 970k Open X-Embodiment trajectory 上訓出 7B model，並把 action tokenize 成 7-DoF 離散 token。LoRA fine-tune 即可在新 embodiment 上適配，4-bit quantization 仍保留性能。<strong>Critical view</strong>：5 Hz inference latency 對高頻 dexterous control 仍是瓶頸（這也是後續 dual-system 出現的原因），且離散 action token 對精細力控限制大。</p>
+<p><strong>π0.5 (Apr 2025)</strong> 是首個能在「<strong>完全未見過的真實住家</strong>」做開放性任務（如清潔廚房 / 整理臥室）的 VLA — 不是 demo 而是反覆 trial 的成功率。技術上靠 hierarchical reasoning（用 VLM 規劃 sub-goal）+ heterogeneous co-training（web data + verbal instructions + 多機器人資料）。<strong>Critical view</strong>：成功率仍非可商業部署等級（特定任務 60–80%）；長時域失敗仍主流。</p>
+<p><strong>Helix (Feb 2025)</strong> 的工程意義很大：在 embedded GPU 上跑完整 dual-process 架構，<strong>S2 跑 7–9 Hz 做語意 / 規劃、S1 跑 200 Hz 做 visuomotor</strong>，控制 Figure 02 的 35 DoF — 證明 dual-system 不是學術點子，能放到出貨機上。</p>
+<h3 id="415-simulator">4.1.5 資料集與 Simulator</h3>
+<ul>
+<li><strong>資料</strong>：Open X-Embodiment（1M+ traj, 22 embodiments, 2024 Google + 21 機構聯盟）、DROID（76k demos, 564 scenes, RSS 2024）、Mobile ALOHA dataset、BridgeData-V2、RoboCasa 100 廚房任務。</li>
+<li><strong>Simulator</strong>：Isaac Lab（GPU end-to-end，2025 推 4.x）、Isaac Sim、MuJoCo MJX（JAX-native, differentiable, 2025）、ManiSkill3（SAPIEN backend, 2024）、Habitat 3.0（室內 navigation）、RLBench、CALVIN、LIBERO、Newton（2025 NVIDIA + Google + Disney）。</li>
+<li><strong>數字</strong>：Isaac Lab 在 8× RTX Pro 6000 跑 humanoid RL 達 <strong>2M env step / sec</strong>，manipulation 達 900k FPS。</li>
+</ul>
+<h3 id="416">4.1.6 未來方向</h3>
+<ol>
+<li><strong>Dual-system architecture 標準化</strong>：S2 (VLM, 5–10 Hz) + S1 (visuomotor, 100–200 Hz) 已成 Helix / GR00T N1 / Gemini Robotics 1.5 共識。</li>
+<li><strong>World-model + VLA 整合</strong>：V-JEPA 2、1XWM 嘗試把 world model 變成 robot 的 imagination engine。</li>
+<li><strong>Sim2Real with differentiable physics</strong>：Newton + MJX 推動「梯度可穿過 simulator」。</li>
+<li><strong>Verifier-driven robot RL</strong>：類似 RLVR 在 LLM 推理上的成功，下一步是怎麼為 manipulation 設計 reliable verifier。</li>
+<li><strong>資料 scaling</strong>：1M trajectory 仍只是 LLM 訓練資料的 &lt; 1%，需要更便宜的 teleop / 影片監督路線（HumanPlus、ASAP）。</li>
+</ol>
+<hr />
+<h2 id="42-game-ai">4.2 Game AI</h2>
+<h3 id="421">4.2.1 問題定義</h3>
+<p>Game AI 涵蓋 perfect-information board games（圍棋、西洋棋）、imperfect-information games（撲克、Diplomacy）、realtime competitive video games（StarCraft、Dota、GT 賽車）、open-world creative games（Minecraft）。共同挑戰：<strong>長時域 credit assignment、多 agent 競合、龐大狀態空間、稀疏 reward</strong>。</p>
+<h3 id="422-drl">4.2.2 為什麼 DRL 有用</h3>
+<ul>
+<li>Self-play 提供 <strong>automatic curriculum</strong> — 對手隨自己變強，永遠在學區邊緣。</li>
+<li>棋類遊戲的 <strong>可驗證 reward</strong>（勝負）讓 RL 可以遠超 supervised learning（後者受限於人類 demonstration 的上限）。</li>
+<li>多 agent setting 中 <strong>Nash equilibrium / 子博弈完美 equilibrium</strong> 提供漂亮的理論 grounding。</li>
+</ul>
+<h3 id="423-sota-lineage-map">4.2.3 SOTA 系統 (Lineage Map)</h3>
+<pre><code>2016  AlphaGo (Nature) — human-data + RL self-play + MCTS
+2017  AlphaGo Zero (Nature) — tabula rasa
+2018  AlphaZero (Science) — generalized to chess/shogi
+2019  AlphaStar (Nature) — StarCraft II Grandmaster, League training
+2019  OpenAI Five (Dota 2) — PPO + 128k CPU
+2020  MuZero (Nature) — learned latent dynamics
+2022  Cicero (Science) — Diplomacy + LLM dialogue
+2022  DeepNash (Science) — Stratego, model-free Nash (R-NaD)
+2022  Gran Turismo Sophy (Nature) — beat human champions, QR-SAC
+2023  Voyager (NeurIPS) — Minecraft LLM agent, no gradient RL
+2024  AlphaGeometry (Nature) — IMO geometry
+2024  SIMA (DeepMind) — 9 commercial 3D games, generalist
+2024  Tearing-instability avoidance (Nature) — DIII-D plasma control
+2025  DreamerV3 (Nature) — first to mine diamonds **from scratch**
+2025  SIMA 2 (Dec 2025) — Gemini-powered, self-improving in 3D
+2025  AlphaProof + AlphaGeometry 2 (Nature, Nov) — IMO 2024 silver, 28/42
+</code></pre>
+<h3 id="424">4.2.4 代表性論文分析</h3>
+<p><strong>AlphaStar (Nature 2019) <sup id="fnref:vinyals2019alphastar"><a class="footnote-ref" href="#fn:vinyals2019alphastar">45</a></sup></strong>. 第一次在 realtime imperfect-information game 中達 Grandmaster。架構結合 (a) 971k 人類 replay 的 supervised imitation、(b) transformer + pointer network、(c) <strong>League training</strong> — 主 agent 與 main-exploiter / league-exploiter 共同演化以避免 strategy cycling。<strong>Critical view</strong>：APM 與 camera 限制曾受爭議；對 OOD 的人類策略仍脆弱；訓練成本約 $10M。<strong>啟示</strong>：純 RL on Pong 行得通，但要打複雜遊戲，supervised init + population-based 是必要的。</p>
+<p><strong>MuZero (Nature 2020) <sup id="fnref2:schrittwieser2020muzero"><a class="footnote-ref" href="#fn:schrittwieser2020muzero">8</a></sup></strong>. 真正把 model-based RL 帶到實用層級。核心是 learning a <strong>value-equivalent</strong> latent dynamics model — 不必預測完整 next-state pixels，只預測「對 policy / value 有用」的潛在表徵。同一套架構打敗 AlphaZero（棋類）+ R2D2（Atari）。<strong>Critical view</strong>：訓練成本高；對 stochastic env（如撲克）不擅長；模型本身非 interpretable。</p>
+<p><strong>DreamerV3 (Nature April 2025) <sup id="fnref:hafner2025dreamerv3"><a class="footnote-ref" href="#fn:hafner2025dreamerv3">46</a></sup></strong>. <strong>第一個用單一 hyperparameter config 解 150+ 任務的演算法</strong>，且首次「從零開始」（無 human data）在 Minecraft 挖到鑽石（~30M env steps）。技巧：Recurrent State-Space Model + categorical latents + symlog squashing — 處理不同 reward / observation scale 的關鍵。<strong>Critical view</strong>：訓練 wall-clock 仍以天計；無法像 VPT 那樣利用 YouTube 影片。</p>
+<p><strong>AlphaProof + AlphaGeometry 2 (Nature Nov 2025) <sup id="fnref:deepmind2025alphaproof"><a class="footnote-ref" href="#fn:deepmind2025alphaproof">47</a></sup></strong>. IMO 2024 拿銀牌（28/42 分），解了 6 題中的 3 題，包括 Q6（人類只有 5 位解出）。<strong>AlphaProof</strong>：用 Lean formalize，AlphaZero-style RL 在百萬 auto-formalized 題目上訓練。<strong>AlphaGeometry 2</strong>：神經符號 hybrid — LLM 提案輔助線，symbolic engine 驗證，比 v1 快 100×（IMO 2024 Q4 在 19 秒內解出）。<strong>Critical view</strong>：combinatorics 仍未解；formalization 仍是瓶頸；難 transfer 到研究級數學。</p>
+<p><strong>SIMA 2 (Dec 2025) <sup id="fnref:sima2025v2"><a class="footnote-ref" href="#fn:sima2025v2">48</a></sup></strong>. 用 Gemini 驅動的 self-improving 3D 遊戲 generalist。最關鍵的創新是 <strong>self-play loop 使用 Gemini-generated reward</strong> — 在新 env 不靠人類設計 reward，靠 LLM judge。約是 v1 兩倍成功率，trained env 接近人類。<strong>Critical view</strong>：長時域規劃仍弱、精細運動仍弱、evaluation 限於 DeepMind 自選 game。</p>
+<h3 id="425-simulator">4.2.5 資料集 / Simulator</h3>
+<ul>
+<li><strong>棋類</strong>：AlphaZero 用自己的 self-play；無外部 dataset。</li>
+<li><strong>StarCraft / Dota</strong>：人類 replay 資料集 + 自家 simulator。</li>
+<li><strong>Minecraft</strong>：MineDojo（NeurIPS 2022）— simulator + 730k YouTube 影片 + 7k wiki page + 340k Reddit；VPT 用 contractor 標註 → IDM → 70k 小時 unlabeled video。</li>
+<li><strong>GT 賽車</strong>：Sony PlayDriver simulator（內部）。</li>
+<li><strong>數學</strong>：Lean 4 mathlib（百萬 formalized 定理）。</li>
+</ul>
+<h3 id="426">4.2.6 未來方向</h3>
+<ol>
+<li><strong>Foundation agent for games</strong>：SIMA 2 的 self-improving loop 是雛形；目標是跨遊戲、跨遊戲類型的單一 model。</li>
+<li><strong>Verifier-driven scientific game</strong>：把 IMO 推理 transfer 到實際定理（millennium prize 級別）。</li>
+<li><strong>Open-ended creative game AI</strong>：Voyager 開頭、SIMA 2 接力，但「無限發明新任務」仍未真正解決。</li>
+<li><strong>多模態 game agents</strong>：把語音 / 視訊 / 鍵盤 / mouse 視為通用 action space，向 SIMA / Helix-style 收斂。</li>
+</ol>
+<hr />
+<h2 id="43-ai-for-science">4.3 AI for Science</h2>
+<h3 id="431">4.3.1 問題定義</h3>
+<p>科學發現的核心活動：(1) 大空間搜尋（化合物、材料、theorem、algorithm），(2) 多 step decision under uncertainty（實驗該做哪個 / 該量哪個量），(3) 高成本驗證（合成、實驗、formal proof）。這恰好對應 RL 的核心結構：long-horizon decision、稀疏但可驗證的 reward。</p>
+<h3 id="432-drl">4.3.2 為什麼 DRL 有用</h3>
+<ul>
+<li><strong>Verifiable reward</strong>：許多科學問題有可驗證的成功訊號（化合物的 binding affinity、formal proof 的 Lean check、algorithm 的執行時間），這正是 RLVR 的理想場景。</li>
+<li><strong>跟人類昂貴的試錯比優勢</strong>：模擬器內 trial 便宜（毫秒），把人類數年研究壓縮到數天。</li>
+<li><strong>Foundation model + RL outer loop 已成主流範式</strong>：LLM 提案、verifier scoring、RL 更新 — 與 AlphaProof / FunSearch / AI-Scientist 一脈相承。</li>
+</ul>
+<h3 id="433-sota-drl-rl">4.3.3 SOTA 系統（不限於純 DRL，但 RL 是核心驅動）</h3>
+<table>
+<thead>
+<tr>
+<th>子領域</th>
+<th>代表系統</th>
+<th>期刊</th>
+<th>年份</th>
+<th>RL 角色</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>蛋白質結構</strong></td>
+<td>AlphaFold 2/3</td>
+<td>Nature 2021/2024</td>
+<td>2021/24</td>
+<td>非 RL（diffusion + attention），但下游設計用 RL</td>
+</tr>
+<tr>
+<td><strong>De novo 蛋白質設計</strong></td>
+<td><strong>RFDiffusion</strong> <sup id="fnref:watson2023rfdiffusion"><a class="footnote-ref" href="#fn:watson2023rfdiffusion">49</a></sup></td>
+<td>Nature 2023</td>
+<td>2023</td>
+<td>生成 diffusion + 下游 RL fine-tune ProteinMPNN</td>
+</tr>
+<tr>
+<td><strong>化合物設計</strong></td>
+<td><strong>REINVENT 4</strong> <sup id="fnref:loeffler2024reinvent"><a class="footnote-ref" href="#fn:loeffler2024reinvent">50</a></sup></td>
+<td>J. Cheminf. 2024</td>
+<td>2024</td>
+<td><strong>PPO 直接 optimize multi-property reward</strong>（QED, SAS, docking）</td>
+</tr>
+<tr>
+<td><strong>晶體 / 材料</strong></td>
+<td><strong>GNoME</strong> <sup id="fnref2:merchant2023gnome"><a class="footnote-ref" href="#fn:merchant2023gnome">51</a></sup></td>
+<td>Nature 2023</td>
+<td>2023</td>
+<td>Active learning（RL-adjacent）</td>
+</tr>
+<tr>
+<td><strong>自主合成</strong></td>
+<td><strong>A-Lab</strong> <sup id="fnref2:szymanski2023alab"><a class="footnote-ref" href="#fn:szymanski2023alab">52</a></sup></td>
+<td>Nature 2023</td>
+<td>2023</td>
+<td>LLM 抽 recipe + 熱力學 active learning</td>
+</tr>
+<tr>
+<td><strong>代數演算法</strong></td>
+<td><strong>AlphaTensor</strong> <sup id="fnref:fawzi2022alphatensor"><a class="footnote-ref" href="#fn:fawzi2022alphatensor">53</a></sup></td>
+<td>Nature 2022</td>
+<td>2022</td>
+<td><strong>純 AlphaZero MCTS</strong> 找 tensor decomposition</td>
+</tr>
+<tr>
+<td><strong>數學發現</strong></td>
+<td><strong>FunSearch</strong> <sup id="fnref:romera2023funsearch"><a class="footnote-ref" href="#fn:romera2023funsearch">54</a></sup></td>
+<td>Nature 2023</td>
+<td>2023</td>
+<td>LLM 提 mutation + score-based selection</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>AlphaProof</strong></td>
+<td>Nature 2025</td>
+<td>2025</td>
+<td>AlphaZero-style RL on Lean proof tree</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>AlphaGeometry 2</strong></td>
+<td>Nature 2025</td>
+<td>2025</td>
+<td>LLM 提 aux 線 + symbolic verifier</td>
+</tr>
+<tr>
+<td><strong>演算法</strong></td>
+<td><strong>AlphaDev</strong> <sup id="fnref2:mankowitz2023alphadev"><a class="footnote-ref" href="#fn:mankowitz2023alphadev">55</a></sup></td>
+<td>Nature 2023</td>
+<td>2023</td>
+<td>AlphaZero 在 assembly instruction space；<strong>merged into LLVM libc++</strong></td>
+</tr>
+<tr>
+<td><strong>電漿控制</strong></td>
+<td><strong>DIII-D Tearing avoidance</strong> <sup id="fnref2:seo2024diii_d"><a class="footnote-ref" href="#fn:seo2024diii_d">56</a></sup></td>
+<td>Nature 2024</td>
+<td>2024</td>
+<td>RL 即時調磁場避開 tearing instability</td>
+</tr>
+<tr>
+<td><strong>晶片設計</strong></td>
+<td><strong>AlphaChip</strong> <sup id="fnref:mirhoseini2021chip"><a class="footnote-ref" href="#fn:mirhoseini2021chip">57</a></sup></td>
+<td>Nature 2021 + addendum 2024</td>
+<td>2021/24</td>
+<td>PPO + GNN 做 floorplan；<strong>部署在 TPU</strong></td>
+</tr>
+<tr>
+<td><strong>自主科學家</strong></td>
+<td>Coscientist <sup id="fnref:boiko2023coscientist"><a class="footnote-ref" href="#fn:boiko2023coscientist">58</a></sup></td>
+<td>Nature 2023</td>
+<td>2023</td>
+<td>GPT-4 agent + 真實實驗室；做 Pd-catalyzed coupling</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>AI Scientist v2</strong> <sup id="fnref2:yamada2025aisci"><a class="footnote-ref" href="#fn:yamada2025aisci">59</a></sup></td>
+<td>arXiv 2025</td>
+<td>2025</td>
+<td><strong>首次 AI-authored paper 通過 ICLR 2025 workshop peer review</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="434">4.3.4 代表性論文分析</h3>
+<p><strong>AlphaDev (Nature 2023) <sup id="fnref:mankowitz2023alphadev"><a class="footnote-ref" href="#fn:mankowitz2023alphadev">55</a></sup></strong>. 真正影響日常 computing — DeepMind 把 AlphaZero 套用到 assembly instruction game，找到 short-sequence sort 比現有 libc++ 快 <strong>70%</strong> 的演算法，<strong>merged into LLVM libc++</strong>，每天執行數兆次。Latency reward per-instruction，correctness 用 test-equivalence。<strong>Critical view</strong>：只在 short branchless kernels 有效；不能 generalize 到任意演算法。<strong>意義</strong>：是少數能說「我的 RL 改變了基礎建設」的案例。</p>
+<p><strong>DIII-D Tearing-instability avoidance (Nature Feb 2024) <sup id="fnref:seo2024diii_d"><a class="footnote-ref" href="#fn:seo2024diii_d">56</a></sup></strong>. 在真實 tokamak 上即時跑 RL 控制磁場，避免電漿 disruption（這是 fusion 商用的最大障礙之一）。能 compete 古典 PID/MPC 是因為 plasma dynamics 太高維。<strong>Critical view</strong>：sim2real 仍需 per-tokamak retraining；ITER 級別未證；reward 含 engineered terms 不確定通用性。</p>
+<p><strong>AI Scientist v2 (Apr 2025) <sup id="fnref:yamada2025aisci"><a class="footnote-ref" href="#fn:yamada2025aisci">59</a></sup></strong>. Sakana AI 的 v2 用 agentic tree search + experiment manager。<strong>首篇 AI 全自動撰寫的 paper 通過 ICLR 2025 workshop peer review</strong>。雖然有 arXiv 2502.14297 對 v1 的尖銳批評（弱 literature synthesis、表面 novelty、shallow ablation），這仍代表一個門檻被跨過。<strong>意義</strong>：autonomous research agent 從概念變成可量化驗證的階段。</p>
+<p><strong>GNoME + A-Lab (Nature 2023, 連續發表) <sup id="fnref:merchant2023gnome"><a class="footnote-ref" href="#fn:merchant2023gnome">51</a></sup> <sup id="fnref:szymanski2023alab"><a class="footnote-ref" href="#fn:szymanski2023alab">52</a></sup></strong>. GNoME 用 GNN + active learning 發現 2.2M 晶體 candidate，A-Lab 用自主機器人 17 天合成 41/58 個 GNoME 推薦。<strong>Critical view</strong>：2024 年 Cheetham &amp; Seshadri 批評許多 GNoME "新材料" 其實是 rediscovery 或 composition duplicate；A-Lab 的 phase ID 也被質疑。但 <strong>這仍是 RL + 自主實驗室「閉環」的最完整 demo</strong>。</p>
+<h3 id="435-simulator">4.3.5 資料集 / Simulator</h3>
+<ul>
+<li><strong>蛋白質</strong>：PDB（19 萬+ 結構）、UniProt 序列、ESM-3 訓練用 2.78B proteins。</li>
+<li><strong>化合物</strong>：ZINC, ChEMBL, GuacaMol, MOSES benchmark。</li>
+<li><strong>材料</strong>：Materials Project, ICSD, OQMD；GNoME 的 release。</li>
+<li><strong>數學</strong>：Lean 4 mathlib, IMO past papers, MathPile, ProofNet。</li>
+<li><strong>演算法</strong>：CodeContests（AlphaCode）, LLVM IR, GEMM benchmark。</li>
+<li><strong>科學文獻</strong>：S2ORC, OpenReview replicas。</li>
+</ul>
+<h3 id="436">4.3.6 未來方向</h3>
+<ol>
+<li><strong>Closed-loop autonomous lab</strong>：A-Lab 是雛形，下一步是「LLM 提假設 → RL 規劃實驗 → robot 執行 → 解讀資料 → 更新假設」全自動。</li>
+<li><strong>RL on formal verifier</strong>：AlphaProof 證明這條路可行，把它擴到生物學（如 PathML proof）、物理（symbolic regression）。</li>
+<li><strong>避免 reproducibility crisis</strong>：AlphaChip / GNoME 的爭議警示，AI for Science 需要 open benchmark 與 independent replication，不只是 Nature 封面。</li>
+<li><strong>多 modal scientific agent</strong>：未來 agent 同時看 paper PDF、跑 simulation、操作真實 instrument，朝 Coscientist + AI Scientist v2 整合。</li>
+</ol>
+<hr />
+<h1 id="part-5-sota-research-trends-20252026">Part 5 — SOTA Research Trends (2025–2026)</h1>
+<p>把 Part 1–4 收斂起來看，可以找出 <strong>十條</strong> 2025–2026 真正在推進 DRL 與 agentic AI 邊界的研究 trend。本章對每條 trend 解釋 <strong>為什麼重要 / 當前限制 / 未來方向</strong>。</p>
+<h2 id="51-embodied-ai">5.1 Embodied AI</h2>
+<p><strong>為什麼重要。</strong> 從 ChatGPT 之後，業界普遍相信 AI 的下一個 frontier 在 <strong>physical world</strong>——能拿東西、能在你廚房做菜、能去 Mercedes 工廠搬箱子。2025 年的代表事件：
+- Figure 03（Oct 2025）以 12k units/年產能設計；
+- Apptronik Apollo 拿 $520M，$5B 估值；
+- 1X NEO 開放消費市場（$499/月訂閱）；
+- Tesla Optimus Gen 3 demo kung-fu / 烹飪。</p>
+<p><strong>當前限制。</strong> (1) <strong>資料稀缺</strong>：Open X-Embodiment 1M+ trajectory 在 LLM 資料尺度上只是「打底」；(2) <strong>長時域 reliability</strong>：示範影片漂亮，反覆 trial 的 pass^k 仍低；(3) <strong>安全認證</strong>：沒有 humanoid 取得 unstructured home deployment 的 formal safety cert。</p>
+<p><strong>未來方向。</strong> 大規模 teleop fleet（特斯拉、Figure）+ 人類影片監督（HumanPlus、V-JEPA 2）+ differentiable simulator + dual-system architecture，是接下來 3–5 年的工程主軸。</p>
+<h2 id="52-world-models">5.2 World Models</h2>
+<p><strong>為什麼重要。</strong> World model 是讓 agent 「在腦中想像 → 規劃 → 行動」的核心。2024–2025 三個並行突破：
+- <strong>DreamerV3</strong> (Nature April 2025)：第一個用單一 hyperparameter 跨 150+ 任務、且從零挖到 Minecraft diamond 的演算法。
+- <strong>Genie 2 → Genie 3</strong> (2024 Dec / 2025 Aug)：DeepMind 從 2D playable 推到 720p 24 fps 多分鐘 consistent 的 interactive world，已釋出 "Project Genie"（2026 Jan）。
+- <strong>V-JEPA 2</strong> (Meta Jun 2025)：1.2B params 在 1M 小時影片 + 62 小時 robot data 上訓練，zero-shot pick-and-place 65–80%；比 NVIDIA Cosmos 快約 30×。</p>
+<p><strong>當前限制。</strong> Sora-style video model 的 cause-and-effect 仍弱（會 hallucinate 不合物理）；Genie 3 有 10 秒級 short-term memory；V-JEPA 走 embedding-space prediction，對 fine control 不夠直接。</p>
+<p><strong>未來方向。</strong> World model + RL outer loop（用 world model 當 imaginary env，把 RL data efficiency 推上幾個量級）是 2026–2027 預期突破點；differentiable physics（Newton、MJX）會強化這條路。</p>
+<h2 id="53-multi-agent-rlmarl-llm-agent">5.3 Multi-agent RL（MARL 與 LLM agent 的融合）</h2>
+<p><strong>為什麼重要。</strong> 真實場景幾乎沒有 single-agent — 自駕、生產線、市場、社交都是 multi-agent。經典 MARL（QMIX、MAPPO、CTDE 家族）解 cooperative 與 zero-sum 已有成果；但 <strong>LLM 多 agent</strong>（MetaGPT、CrewAI、AutoGen）給了新的可能性：以自然語言為通訊媒介、以 role 為分工。</p>
+<p><strong>當前限制。</strong> (1) MARL 對於異質 reward / state / action space 的 multi-task 擴展仍開放；(2) LLM agent 群組缺少 MARL 嚴格的 credit assignment；(3) 兩條路線<strong>還沒有像 LLM + RL 那樣的成功融合典範</strong>。</p>
+<p><strong>未來方向。</strong> Population-based training（AlphaStar 風格）套到 LLM agent；RLAIF 形式的 group reward；MARL 中嵌入 LLM 提案層。SIMA 2 的 group self-play 是早期 prototype。</p>
+<h2 id="54-offline-rl">5.4 Offline RL</h2>
+<p><strong>為什麼重要。</strong> 機器人、醫療、金融、自駕的真實場景<strong>不能 online try-and-error</strong>，只能從歷史 dataset 學。Offline RL（BCQ / CQL / IQL / Decision Transformer）讓「從 log 學 policy」變成可行。</p>
+<p><strong>當前限制。</strong> (1) Distribution shift 仍是核心難題；(2) 上限受限於 behavior policy 覆蓋；(3) <strong>缺少 well-known benchmark 之外的真實成功案例</strong>——D4RL/Atari/RoboMimic 之外，產業界 deployment 仍少。</p>
+<p><strong>未來方向。</strong> Offline-to-online fine-tuning（先 offline、再小量 online 修正）、與 VLA fine-tuning 結合（用 RL 修 imitation policy 的 reliability tail）。</p>
+<h2 id="55-diffusion-policy">5.5 Diffusion Policy</h2>
+<p><strong>為什麼重要。</strong> 機器人示範資料天生 multimodal（同個 sub-goal 可有多種完成方式），Gaussian policy 容易塌縮。Chi et al. (RSS 2023, IJRR 2025) 的 <strong>Diffusion Policy</strong> 用 conditional denoising 自然表達多峰，+46.9% over 先前 SOTA across 12 任務。</p>
+<p><strong>當前限制。</strong> (1) 推論 latency 高（多步 denoising）；(2) cross-embodiment transfer 不佳；(3) 對 reflective / transparent objects（DP3 依賴 depth）效果差。</p>
+<p><strong>未來方向。</strong> Distillation 把多步 diffusion 壓成 single-step（consistency models）；flow matching 路線（π0）；與 VLA 整合（OpenVLA 仍是 discrete token，DP-style continuous output 是改進空間）。</p>
+<h2 id="56-foundation-agents">5.6 Foundation Agents</h2>
+<p><strong>為什麼重要。</strong> 從 specialist policy 轉向 <strong>「一個 model 跨多任務、多 embodiment、多 modality」</strong>。代表：
+- <strong>Magma</strong> (CVPR 2025)：同時做 UI 與 robot manipulation；
+- <strong>GR00T N1</strong>：首個 open humanoid foundation model；
+- <strong>SIMA 2</strong>：跨多款 3D game 的 generalist；
+- <strong>Voyager</strong>：用 LLM 當 in-context RL 的 outer loop；
+- <strong>Octo / CrossFormer</strong>：多 embodiment robot policy。</p>
+<p><strong>當前限制。</strong> (1) Per-task specialist 仍打贏 foundation agent（trade-off 仍在）；(2) 缺乏 well-defined evaluation 跨領域；(3) 訓練成本急速上升。</p>
+<p><strong>未來方向。</strong> 統一的 action space tokenization（OpenVLA 風格的 discrete token、或 π0 的 flow continuous）；more compute → emergence；foundation agent + 在 deployment 端做 RL personalization。</p>
+<h2 id="57-robotics-foundation-models">5.7 Robotics Foundation Models</h2>
+<p><strong>為什麼重要。</strong> 與 5.6 重疊但聚焦 robotics — 2024–2025 是 robotics 自己的「BERT moment」：
+- <strong>OpenVLA</strong> (2024)：第一個 open VLA。
+- <strong>π0 / π0.5</strong> (2024–25)：高頻 continuous control 突破。
+- <strong>Helix</strong> (Feb 2025)：dual-system 上 embedded GPU。
+- <strong>GR00T N1</strong> (Mar 2025)：NVIDIA open humanoid FM。
+- <strong>Gemini Robotics 1.5</strong> (Sep 2025)：加入 agentic tool use；部署 Apollo。</p>
+<p><strong>當前限制。</strong> (1) Latency vs capability tradeoff（VLA 越大越聰明，越大延遲越高）；(2) Data scarcity；(3) Per-embodiment generalization 仍弱；(4) LIBERO-PRO 揭示 benchmark memorization 問題。</p>
+<p><strong>未來方向。</strong> Dual-system 標準化、heterogeneous co-training（web + verbal + 多 robot）、與 world model 整合。</p>
+<h2 id="58-sim2real-transfer">5.8 Sim2Real Transfer</h2>
+<p><strong>為什麼重要。</strong> 真實機器人訓練昂貴、危險、慢；模擬器訓便宜、安全、快百萬倍。<strong>Sim2Real gap 是這條 pipeline 的決勝點</strong>。</p>
+<p><strong>2025 重要事件</strong>：
+- <strong>Newton physics engine</strong> (NVIDIA + Google + Disney, GTC 2025)：open-source、GPU-accelerated、differentiable，<strong>humanoid 70× 加速、in-hand manipulation 100×</strong>。
+- <strong>MuJoCo MJX + Playground</strong> (Feb 2025)：JAX-native，sim2real 到 6 個 robot 平台只花 &lt; 8 週。
+- <strong>DrEureka</strong> (RSS 2024)：LLM 同時自動生成 reward 與 domain randomization 參數。
+- <strong>ASAP</strong> (2025)：sim-pretrain + delta-action residual model 補 sim2real gap，可達 agile parkour。</p>
+<p><strong>當前限制。</strong> Contact-rich / deformable / fluid 仍是 simulator 的短板；vision sim2real 仍需 photorealistic rendering（如 Cosmos、Omniverse）。</p>
+<p><strong>未來方向。</strong> Differentiable physics 直接讓 gradient 穿過 simulator；real-data residual learning（ASAP）；foundation video generator + RL（V-JEPA 2、Sora-style）。</p>
+<h2 id="59-autonomous-scientific-ai">5.9 Autonomous Scientific AI</h2>
+<p><strong>為什麼重要。</strong> AI 不只是工具，而是 <strong>科學家本身</strong>——這是 AGI 最具體的試金石。代表：
+- <strong>Coscientist</strong> (Nature 2023)：GPT-4 agent + 真實實驗室，做 Pd-catalyzed coupling。
+- <strong>A-Lab</strong> (Nature 2023)：自主合成 GNoME 提案的 41 個材料 / 17 天。
+- <strong>AlphaProof + AlphaGeometry 2</strong> (Nature 2025)：IMO 2024 銀牌（28/42）。
+- <strong>AI Scientist v2</strong> (Sakana, Apr 2025)：<strong>首篇 AI-authored paper 通過 ICLR 2025 workshop peer review</strong>。</p>
+<p><strong>當前限制。</strong> (1) Literature synthesis 仍弱；(2) Novelty 多為 surface-level；(3) Reproducibility crisis（GNoME / AlphaChip 都受 2024 critique）；(4) 缺少 cross-discipline 通用 verifier。</p>
+<p><strong>未來方向。</strong> 封閉迴圈 hypothesis → experiment → analysis → next hypothesis 全自動；以 RL 在 verified scientific reward 上 self-improve；多 modality scientific agent（看 PDF + 跑 sim + 操 instrument）。</p>
+<h2 id="510-rl-transformers">5.10 RL + Transformers</h2>
+<p><strong>為什麼重要。</strong> 兩條融合線：</p>
+<p><strong>A. Transformer 當 policy 架構</strong>（policy as sequence model）
+- <strong>Decision Transformer / Trajectory Transformer</strong>（NeurIPS 2021）
+- <strong>Gato</strong>（DeepMind 2022）：一個 transformer 玩 Atari + 寫字 + 操作 Sawyer 機械手 + 對話
+- <strong>Octo / OpenVLA / π0 / GR00T</strong>：robotics 領域全部 transformer-based</p>
+<p><strong>B. RL 訓練 Transformer policy（用 RL 做後訓練）</strong>
+- RLHF / RLAIF / DPO / KTO 訓 LLM
+- RLVR（DeepSeek-R1 / o1）訓 reasoning model
+- GRPO（DeepSeek 提）取消 critic 降低訓練成本</p>
+<p><strong>當前限制。</strong> (1) Transformer 的計算成本對 high-frequency control 是負擔；(2) RL post-training 對 base model 的依賴強（pre-training 沒覆蓋的能力，RL 很難「無中生有」）；(3) 缺少 standardized RL+Transformer benchmark。</p>
+<p><strong>未來方向。</strong> Mamba/SSM 等線性序列 model + RL；長時域 token-by-token planning；test-time RL（在 inference 時繼續學）。</p>
+<hr />
+<h2 id="511">5.11 五條趨勢的交叉骨架</h2>
+<p>以上十條 trend 互相關聯，可以收斂成 <strong>五條主軸</strong>：</p>
+<pre><code>1. Foundation Models 與 RL 的融合
+   - LLM/VLM 提供 prior, RL 提供 alignment + reasoning
+   - 代表：RLHF, RLAIF, DPO, RLVR, GRPO; SIMA 2, AI Scientist v2
+
+2. Embodied generalist agent
+   - Single model 跨 task / embodiment / modality
+   - 代表：OpenVLA, π0.5, GR00T N1, Magma, Gemini Robotics 1.5
+
+3. Sim2Real + Differentiable Physics
+   - GPU-accelerated photorealistic sim, 梯度可穿過 simulator
+   - 代表：Newton, MJX, Isaac Lab 4.x, DrEureka
+
+4. World Model + Imagined Planning
+   - 在 agent 腦中模擬世界做 planning
+   - 代表：DreamerV3 (Nature 2025), Genie 3, V-JEPA 2
+
+5. Verifier-Driven RL
+   - Formal proof / code execution / sim 作為可驗證 reward
+   - 代表：DeepSeek-R1, AlphaProof, AlphaGeometry 2, AlphaDev
+</code></pre>
+<p>這五條主軸構成 2025–2026 DRL 與 agentic AI 的「全景」，下一階段的突破很可能來自<strong>它們的交叉點</strong>（如 world-model RL on humanoid、verifier-driven scientific agent）。</p>
+<h1 id="part-6-comparative-analysis">Part 6 — Comparative Analysis</h1>
+<p>下面以五個代表性演算法做橫向比較。除了題目要求的 strength / weakness / sample efficiency / real-world usage 四維，再額外加入 <strong>policy type、on/off policy、planning vs model-free、典型 wall-clock 與是否仍是 SOTA baseline</strong> 等資訊以增加 analytical depth。</p>
+<h2 id="61">6.1 五法概覽表</h2>
+<table>
+p{2.4cm}p{3.0cm}p{3.0cm}p{1.7cm}p{3.0cm}}
+
+<tr><td>**演算法**</td><td>**類型**</td><td>**Strength**</td><td>**Weakness**</td><td>**Sample Eff.**</td><td>**Real-world Usage**</td></tr>
+
+<tr><td>DQN</td><td>Value-based / off-policy / discrete</td><td>Atari benchmark 元祖、簡單、replay 與 target net 變所有 DQN 系列基石</td><td>$\max$ 造成 overestimation；連續動作不可用；訓練不穩</td><td>中（off-policy、replay）</td><td>推薦系統、廣告 bidding、教學示例；產業已大量被 Rainbow / PPO 取代</td></tr>
+
+<tr><td>PPO</td><td>Policy-based / on-policy</td><td>實作簡單、超參魯棒、離散 / 連續通用；**LLM RLHF 事實標準**</td><td>on-policy 因此 sample-inefficient；需大量並行 envs；對 advantage normalization 等實作細節敏感</td><td>低</td><td>RLHF (GPT/Claude/Gemini)、Dota 2/OpenAI Five、自駕、Isaac Lab humanoid RL</td></tr>
+
+<tr><td>SAC</td><td>Actor-critic / off-policy / continuous</td><td>連續控制 SOTA baseline；entropy 鼓勵探索；temperature 可自動調；穩</td><td>連續動作專屬；需要 twin critic ensemble；實作較 PPO 複雜</td><td>高</td><td>機械手、四足 / 人形 locomotion (Berkeley G1 15 min)、UAV、自駕；SERL 在真實機器上 25-50 分訓出 PCB 組裝</td></tr>
+
+<tr><td>MuZero</td><td>Model-based / planning + RL</td><td>同一套架構解 board games + Atari；不需已知環境模型；極高 sample efficiency</td><td>工程複雜（MCTS + reps learning）；對 stochastic env 較弱；訓練成本高</td><td>高（learned model）</td><td>DeepMind 內部（video compression, search）、學術 model-based RL 標竿；產業少見</td></tr>
+
+<tr><td>Decision Transformer</td><td>Sequence model（無 RL update）</td><td>把 offline RL 變為純 supervised；天然支援 multi-task return-conditioning；Transformer scaling laws</td><td>Stitching 差於 DP-based offline RL；對 OOD return target 敏感；需大量資料</td><td>中（offline，與資料量呈正比）</td><td>VLA 系列（Gato / Octo / OpenVLA / GR00T）的概念祖先；offline RL benchmarks</td></tr>
+
+
+</table>
+
+<h2 id="62">6.2 深度討論</h2>
+<h3 id="621-ppo-baseline">6.2.1 為什麼 PPO 變成「萬用 baseline」？</h3>
+<p>PPO 並不是任一單一指標最好的演算法 — sample efficiency 不如 SAC、planning 不如 MuZero。但它在 <strong>「實作 / 超參 / on-policy 規模化 / 離散+連續通用 / 對 reward scale 魯棒」</strong> 五個維度同時及格。當你的任務是 (a) sim 可以大量並行、(b) 需要 RL 對齊預訓 model（如 RLHF），PPO 幾乎是 default choice。<strong>它的最大競爭者是 GRPO</strong>（DeepSeek 提出，取消 critic 改用 group 標準化 advantage）— 在 LLM 推理 RL 上 GRPO 已逐漸取代 PPO。</p>
+<h3 id="622-sac">6.2.2 為什麼 SAC 在連續控制這麼穩？</h3>
+<p>三個原因：(1) off-policy → replay → sample efficient；(2) twin Q + clipped target → 抑制 overestimation；(3) maximum entropy → 自然探索 + 對多模態最優解友善。SAC 在學術 benchmark 通常打贏 PPO，但 sim2real 部署時 PPO 仍常被選 — 因 PPO 在大規模 distributed 訓練更可預測、不易 critic 過擬合。</p>
+<h3 id="623-muzero">6.2.3 MuZero 為什麼沒在產業界遍地開花？</h3>
+<p>工程上 MuZero 很重 — 同時學三個 head（policy / value / reward）+ MCTS + representation。當 simulator 便宜（如 Atari、棋類），model-free 的 R2D2 / Rainbow / Muesli 已夠強；當需要 model-based 帶來的 sample efficiency，DreamerV3 反而更輕量、且在 Minecraft / DMControl 上 SOTA。<strong>MuZero 是漂亮的學術里程碑，但 DreamerV3 是更實用的工程繼承者</strong>。</p>
+<h3 id="624-decision-transformer">6.2.4 Decision Transformer 開啟了什麼？</h3>
+<p>DT 證明 <strong>「offline RL 可以是純 supervised learning」</strong>，把 RL 變成 sequence modelling，這個 framing 直接導致：
+- <strong>Gato</strong>（DeepMind 2022）：一個 transformer 跨 600+ 任務
+- <strong>Octo / OpenVLA / GR00T</strong>：robotics VLA 全部 transformer-based、全部 IL-as-sequence-modeling</p>
+<p>不過 DT 也有底層缺陷：缺乏 dynamic programming 的 <strong>stitching</strong> 能力（從 sub-optimal 段落拼最優），所以在純 offline benchmark 上常輸 CQL / IQL。實務上 DT-like 架構通常配 RL fine-tuning 補足。</p>
+<h3 id="625">6.2.5 哪種演算法選哪種任務？</h3>
+<table>
+<thead>
+<tr>
+<th>任務情境</th>
+<th>推薦演算法</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Atari / 離散決策</td>
+<td>Rainbow DQN / Muesli</td>
+<td>已是 model-free SOTA</td>
+</tr>
+<tr>
+<td>連續控制（學術 benchmark）</td>
+<td>SAC / TD3</td>
+<td>sample efficient</td>
+</tr>
+<tr>
+<td>大規模分散式（Dota/StarCraft）</td>
+<td>PPO + League</td>
+<td>簡單可預測</td>
+</tr>
+<tr>
+<td>LLM RLHF / RLAIF / RLVR</td>
+<td>PPO / GRPO + DPO/KTO</td>
+<td>事實標準</td>
+</tr>
+<tr>
+<td>Board games / 棋類</td>
+<td>AlphaZero / MuZero</td>
+<td>self-play + MCTS</td>
+</tr>
+<tr>
+<td>開放世界 (Minecraft / DM Control)</td>
+<td><strong>DreamerV3</strong></td>
+<td>單一 hyperparam 跨任務</td>
+</tr>
+<tr>
+<td>Offline RL（醫療 / log）</td>
+<td>IQL / CQL / DT</td>
+<td>OOD-safe</td>
+</tr>
+<tr>
+<td>Robot manipulation（demonstration 豐富）</td>
+<td>Diffusion Policy / OpenVLA</td>
+<td>multimodal continuous</td>
+</tr>
+<tr>
+<td>Robot manipulation（real-world fast）</td>
+<td>SERL (RLPD)</td>
+<td>25–50 分鐘從零</td>
+</tr>
+</tbody>
+</table>
+<h3 id="626">6.2.6 趨勢圖</h3>
+<pre><code>DQN (2013)
+  └─→ Double DQN (2016) ── Dueling (2016) ── PER (2016) ── Distributional C51 (2017) ── Rainbow (2017) ── Muesli (2021)
+                                                                                          │
+                                              ┌───────────────────────────────────────────┘
+                                              ▼
+A3C (2016) ─→ A2C (2016) ─→ PPO (2017) ─→ IMPALA (2018) ─→ V-trace ────────┐
+                                                                            ▼
+                                                                       RLHF / DPO / GRPO (2023–25)
+DDPG (2015) ─→ TD3 (2018)                                                   │
+            ─→ SAC (2018) ─→ SAC-X / DrQ-v2 / SERL ─→ DrEureka (2024)       │
+                                                                            ▼
+AlphaGo (2016) ─→ AlphaGo Zero (2017) ─→ AlphaZero (2018) ─→ MuZero (2020) ─→ DreamerV3 (2025)
+                                                              │                  │
+                                                              └─→ AlphaTensor / AlphaDev / AlphaProof
+Decision Transformer (2021) ─→ Gato (2022) ─→ Octo / OpenVLA / π0 / GR00T N1 (2024–25)
+</code></pre>
+<p>這張圖揭示 2025–2026 三條演化主線：(1) policy 從 model-free 走向 model-based / world-model 路線；(2) sequence modelling 已成為 robotics policy 的主流架構；(3) 所有 SOTA 演算法的「外圍」都被 LLM / foundation model 包覆。</p>
+<h1 id="part-7-github-open-source-ecosystem-survey">Part 7 — GitHub / Open Source Ecosystem Survey</h1>
+<p>DRL 的迭代速度很大程度由開源 community 決定。本章梳理十個對 2024–2026 研究最有影響力的 GitHub 專案，每個都從 <strong>主要用途 / 支援演算法 / 優勢 / 弱點 / 研究 vs 產業適用</strong> 五個維度評估。</p>
+<h2 id="71-stable-baselines3-sb3">7.1 Stable-Baselines3 (SB3)</h2>
+<p><strong>Repo.</strong> <a href="https://github.com/DLR-RM/stable-baselines3">DLR-RM/stable-baselines3</a> — 12k+ stars。
+<strong>用途.</strong> PyTorch 重寫的 OpenAI Baselines；學術界最被引用的 DRL library。
+<strong>演算法.</strong> PPO, A2C, DQN, SAC, TD3, DDPG, HER。
+<strong>優勢.</strong> 文件完整；<strong>rl-baselines3-zoo</strong> 提供 100+ 個 tuned hyperparameter；reproducibility 一流。
+<strong>弱點.</strong> 不支援 distributed training；演算法保守，不追新 SOTA（無 DreamerV3 / MuZero）。
+<strong>適用.</strong> <strong>研究 baseline、教學、prototyping</strong> 是首選；產業大規模 deployment 換 RLlib。</p>
+<h2 id="72-ray-rllib">7.2 Ray RLlib</h2>
+<p><strong>Repo.</strong> <a href="https://github.com/ray-project/ray">ray-project/ray</a> — 33k+ stars（整個 Ray ecosystem）。
+<strong>用途.</strong> 建構在 Ray 上的 distributed RL framework；UC Berkeley RISELab → Anyscale 商業化。
+<strong>演算法.</strong> 30+ algorithm（PPO, APPO, IMPALA, SAC, DQN, R2D2, DDPG, MARL 如 QMIX / MADDPG / PPO-Centralized 等）。
+<strong>優勢.</strong> Scalability 一流，能從單機擴到上千 CPU/GPU；產業級維護；MARL 支援好。
+<strong>弱點.</strong> 抽象多、API 學習曲線陡；2.x → 3.x 大改動讓社群一度抱怨穩定性；單機快速實驗反而不順手。
+<strong>適用.</strong> <strong>產業大規模 DRL</strong> 主流選擇；學術界與 SB3 互補。</p>
+<h2 id="73-cleanrl">7.3 CleanRL</h2>
+<p><strong>Repo.</strong> <a href="https://github.com/vwxyzjn/cleanrl">vwxyzjn/cleanrl</a> — 7k+ stars。
+<strong>用途.</strong> <strong>「每個演算法一個 single-file Python」</strong> — 教學最高優先級的設計哲學。
+<strong>演算法.</strong> PPO, DQN, C51, SAC, TD3, DDPG, RPO, Rainbow（單一檔案，無 OOP 包裝）。
+<strong>優勢.</strong> 可讀性 SOTA；Weights &amp; Biases 整合所有 benchmark；對 reproduce paper 結果極友善。
+<strong>弱點.</strong> 沒有 high-level API 抽象；改架構需要修每個檔案；不支援 distributed。
+<strong>適用.</strong> <strong>學 DRL 內部機制</strong>、複刻 paper、做教學的首選。</p>
+<h2 id="74-openai-spinning-up">7.4 OpenAI Spinning Up</h2>
+<p><strong>Repo.</strong> <a href="https://github.com/openai/spinningup">openai/spinningup</a> — 11k+ stars。
+<strong>用途.</strong> OpenAI 的「自學 DRL」教材包；提供 6 個演算法的 reference implementation + 教材。
+<strong>演算法.</strong> VPG, TRPO, PPO, DDPG, TD3, SAC。
+<strong>優勢.</strong> <strong>教材品質歷史最佳</strong>；公式推導 + code + 直覺三位一體。
+<strong>弱點.</strong> 自 2020 後幾乎停止維護；Python 環境依賴老舊（TF1 + PyTorch 並存）；不會更新到新 SOTA。
+<strong>適用.</strong> <strong>入門教學 only</strong>。產業界已轉用 CleanRL + SB3。</p>
+<h2 id="75-nvidia-isaac-gym-isaac-lab">7.5 NVIDIA Isaac Gym → Isaac Lab</h2>
+<p><strong>Repo.</strong> <a href="https://github.com/isaac-sim/IsaacLab">isaac-sim/IsaacLab</a> — 5k+ stars（前身 Isaac Gym preview 已 EOL）。
+<strong>用途.</strong> GPU-end-to-end 機器人 RL 框架；建構在 Isaac Sim (Omniverse) 上。
+<strong>演算法.</strong> 透過 rl_games / skrl / SB3 整合（PPO 為主，加上 SAC, TRPO）；2024–25 推 Eureka / DrEureka。
+<strong>優勢.</strong> <strong>速度無人能敵</strong>（2M env step/s on 8× RTX Pro 6000）；photorealistic rendering；NVIDIA GPU 生態。
+<strong>弱點.</strong> 非 NVIDIA GPU 不支援；deformable / fluid 仍弱；Omniverse USD 學習曲線陡。
+<strong>適用.</strong> Humanoid / quadruped / 機械手的學術與產業 SOTA。</p>
+<h2 id="76-carla">7.6 CARLA</h2>
+<p><strong>Repo.</strong> <a href="https://github.com/carla-simulator/carla">carla-simulator/carla</a> — 13k+ stars。
+<strong>用途.</strong> 開源都市自駕 simulator；建構在 Unreal Engine 上。
+<strong>演算法.</strong> 任意 DRL（Gym/Gymnasium API），近年主流是 model-based RL + IL hybrid。
+<strong>優勢.</strong> <strong>唯一被廣泛採用的開源自駕 simulator</strong>；社群活躍；CARLA Challenge 是業界共同 leaderboard。
+<strong>弱點.</strong> Unreal 重，難以同時跑大量 env；sim2real gap 仍大；CARLA scenarios 與真實道路分布不完全重疊。
+<strong>適用.</strong> 學術自駕 RL；產業界 PoC、regression testing。</p>
+<h2 id="77-habitat-lab">7.7 Habitat Lab</h2>
+<p><strong>Repo.</strong> <a href="https://github.com/facebookresearch/habitat-lab">facebookresearch/habitat-lab</a> — 2k+ stars（加上 habitat-sim 約 5k+ stars）。
+<strong>用途.</strong> Meta AI 的 embodied AI simulator；專做 navigation + manipulation。
+<strong>演算法.</strong> PPO, DD-PPO（distributed PPO）, IL。
+<strong>優勢.</strong> <strong>室內具身導航的事實標準</strong>；rendering 與物理速度極快（10000+ FPS headless）；HM3D 1000+ 棟真實住宅資料集。
+<strong>弱點.</strong> 物理較弱（manipulation 不如 Isaac）；Linux only。
+<strong>適用.</strong> Visual navigation、object/image/PointNav、social/HRI navigation。</p>
+<h2 id="78-finrl">7.8 FinRL</h2>
+<p><strong>Repo.</strong> <a href="https://github.com/AI4Finance-Foundation/FinRL">AI4Finance-Foundation/FinRL</a> — 11k+ stars。
+<strong>用途.</strong> 哥大 Xiao-Yang Liu 團隊維護的金融 DRL 框架。
+<strong>演算法.</strong> 透過 SB3 / ElegantRL / RLlib（PPO, SAC, A2C, DDPG, TD3）。
+<strong>優勢.</strong> <strong>唯一被廣泛採用的金融專用 DRL 框架</strong>；提供 trading env + 教材 + leaderboard；2024 釋 FinRL-DeepSeek 結合 LLM signal。
+<strong>弱點.</strong> 真實金融 non-stationarity 讓 sim-trained policy 在實盤打折；paper outperformance 須謹慎解讀。
+<strong>適用.</strong> 學術交易策略研究、教學；產業仍以自家專屬 stack 為主。</p>
+<h2 id="79-minedojo">7.9 MineDojo</h2>
+<p><strong>Repo.</strong> <a href="https://github.com/MineDojo/MineDojo">MineDojo/MineDojo</a> — 2k+ stars。
+<strong>用途.</strong> NVIDIA + 學術界的 Minecraft open-ended benchmark；含 simulator + 730k YouTube + 7k wiki + 340k Reddit + MineCLIP。
+<strong>演算法.</strong> 任意 DRL；常與 LLM agent 結合（Voyager、GITM、JARVIS-1）。
+<strong>優勢.</strong> <strong>目前唯一規模化的開放世界 embodied benchmark</strong>；海量 unlabeled video 適合 foundation agent 驗證。
+<strong>弱點.</strong> Java + Mod 環境複雜；Minecraft 與真實世界差距大；活躍維護減少。
+<strong>適用.</strong> Open-ended agent 研究、終身學習、verifier-driven RL on creative tasks。</p>
+<h2 id="710-unity-ml-agents">7.10 Unity ML-Agents</h2>
+<p><strong>Repo.</strong> <a href="https://github.com/Unity-Technologies/ml-agents">Unity-Technologies/ml-agents</a> — 18k+ stars。
+<strong>用途.</strong> Unity 推出的 toolkit，把任何 Unity 場景變成 Gym-compatible env。
+<strong>演算法.</strong> PPO, SAC, POCA（multi-agent）, BC, GAIL。
+<strong>優勢.</strong> <strong>對遊戲開發者最友善</strong>；3D 資產 / 動畫 library 巨大；跨平台部署。
+<strong>弱點.</strong> 物理不及 Isaac/MuJoCo；trainer 不及 RLlib；不適合大規模 distributed。
+<strong>適用.</strong> 遊戲 NPC、教育示範、小規模 robotics（透過 Unity Robotics Hub 接 ROS）。</p>
+<hr />
+<h2 id="711">7.11 比較表</h2>
+<table>
+p{4.0cm}p{3.7cm}p{3.5cm}}
+
+<tr><td>**Repo**</td><td>**核心定位**</td><td>**Strength**</td><td>**Weakness**</td></tr>
+
+<tr><td>SB3</td><td>學術 baseline</td><td>文件完整、rl-zoo 100+ tuned</td><td>單機；不追新 SOTA</td></tr>
+<tr><td>RLlib</td><td>產業 distributed RL</td><td>30+ algorithms; scalable 上千 GPU</td><td>API 陡；版本不穩</td></tr>
+<tr><td>CleanRL</td><td>教學單檔</td><td>可讀性 SOTA；W</td><td>B 整合</td><td>無 high-level API</td></tr>
+<tr><td>Spinning Up</td><td>DRL 入門教材</td><td>教材歷史最佳</td><td>已停止維護</td></tr>
+<tr><td>Isaac Lab</td><td>GPU 機器人 RL</td><td>2M env/s；photorealistic</td><td>NVIDIA only；學習曲線陡</td></tr>
+<tr><td>CARLA</td><td>都市自駕 sim</td><td>業界 leaderboard；社群活躍</td><td>重；sim2real gap</td></tr>
+<tr><td>Habitat Lab</td><td>室內具身導航</td><td>10000 FPS；HM3D dataset</td><td>物理弱；Linux only</td></tr>
+<tr><td>FinRL</td><td>金融 DRL</td><td>唯一金融專用主流框架</td><td>真實市場非穩態</td></tr>
+<tr><td>MineDojo</td><td>Minecraft 開放世界</td><td>海量 video；唯一 open-ended bench</td><td>Java + Mod 複雜</td></tr>
+<tr><td>Unity ML-Agents</td><td>Unity 遊戲 RL</td><td>3D 資產豐富；跨平台</td><td>物理弱；不適合 distributed</td></tr>
+
+
+</table>
+
+<hr />
+<h2 id="712-20252026-repo">7.12 2025–2026 新興 Repo（值得追蹤）</h2>
+<table>
+<thead>
+<tr>
+<th>Repo</th>
+<th>出處</th>
+<th>為什麼重要</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/openvla/openvla">openvla/openvla</a></td>
+<td>Stanford 2024</td>
+<td>第一個 open-weights VLA</td>
+</tr>
+<tr>
+<td><a href="https://github.com/Physical-Intelligence/openpi">Physical-Intelligence/openpi</a></td>
+<td>Physical Intelligence</td>
+<td>π0 系列開源</td>
+</tr>
+<tr>
+<td><a href="https://github.com/NVIDIA/Newton">NVIDIA/Newton</a></td>
+<td>NVIDIA + Google + Disney 2025</td>
+<td>Differentiable GPU physics</td>
+</tr>
+<tr>
+<td><a href="https://github.com/google-deepmind/mujoco_playground">google-deepmind/mujoco_playground</a></td>
+<td>DeepMind 2025</td>
+<td>sim2real 6 平台 &lt; 8 週</td>
+</tr>
+<tr>
+<td><a href="https://github.com/octo-models/octo">octo-models/octo</a></td>
+<td>Berkeley 2024</td>
+<td>Open transformer-based generalist robot</td>
+</tr>
+<tr>
+<td><a href="https://github.com/eureka-research/Eureka">eureka-research/Eureka</a></td>
+<td>NVIDIA + UPenn 2024</td>
+<td>LLM-as-reward-designer</td>
+</tr>
+<tr>
+<td><a href="https://github.com/rail-berkeley/serl">rail-berkeley/serl</a></td>
+<td>Berkeley 2024</td>
+<td>Real-world RL 25–50 min</td>
+</tr>
+<tr>
+<td><a href="https://github.com/deepseek-ai/DeepSeek-R1">deepseek-ai/DeepSeek-R1</a></td>
+<td>DeepSeek 2025</td>
+<td>GRPO + RLVR 開源權重</td>
+</tr>
+<tr>
+<td><a href="https://github.com/modelcontextprotocol/specification">modelcontextprotocol/specification</a></td>
+<td>Anthropic + Linux Foundation 2024–25</td>
+<td>MCP — agent 工具標準</td>
+</tr>
+<tr>
+<td><a href="https://github.com/langchain-ai/langgraph">langchain-ai/langgraph</a></td>
+<td>LangChain 2024–25</td>
+<td>Stateful agent graph runtime</td>
+</tr>
+<tr>
+<td># Part 8 — Bonus MVP: Two Hands-On Demos</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>為了讓這份 survey <strong>不只是文獻整理，而是 grounded in actual code</strong>，本節提供兩個刻意輕量、但 <strong>endpoint-runnable</strong> 的 MVP。前者代表 Part 1–2 的「傳統 DRL 路線」（PPO + Gym），後者代表 Part 3 的「Agentic AI 路線」（tool-using ReAct agent）。</p>
+<h2 id="81-bonus-b-ppo-on-cartpole-v1stable-baselines3">8.1 Bonus B — PPO on CartPole-v1（Stable-Baselines3）</h2>
+<h3 id="_1">目標與設計</h3>
+<ul>
+<li>用 Stable-Baselines3（v2.8.0）的 PPO 訓練 <code>CartPole-v1</code>。</li>
+<li>跑 4 個並行 env、共 50,000 env steps、PPO 預設 hyperparameter（<code>lr=3e-4</code>、<code>n_steps=128</code>、<code>batch=64</code>、<code>gae_lambda=0.95</code>、<code>clip_range=0.2</code>）。</li>
+<li>訓練完成後做 20 episode deterministic evaluation。</li>
+</ul>
+<h3 id="_2">程式碼路徑</h3>
+<pre><code>code/ppo_demo.py
+</code></pre>
+<h3 id="windows-11-python-311-rtx-4090cpu-ppo">實際結果（Windows 11 + Python 3.11 + RTX 4090，CPU PPO）</h3>
+<pre><code>total_timesteps  = 50000
+n_envs           = 4
+seed             = 42
+wallclock_sec    = 81.0
+episodes         = ~400+
+final_mean_eval  = 500.0 ± 0.0     # ← 完美收斂到 CartPole-v1 最高分
+max_episode_ret  = 500.0
+</code></pre>
+<p>訓練曲線：</p>
+<p><img alt="PPO CartPole reward curve" src="../artifacts/ppo_cartpole_reward.png" /></p>
+<h3 id="_3">觀察與對應到報告本體</h3>
+<ol>
+<li><strong>PPO 的 sample efficiency 與穩定性</strong>：CartPole 僅 50K env steps（&lt; 90 秒）即收斂到 500.0；展示了 <strong>Part 1.2.3</strong> 提到「PPO 是最魯棒的 baseline」並非空談。</li>
+<li><strong>on-policy 設定的計算特性</strong>：4 envs × 128 steps = 每 update 收 512 samples，與我們在 <strong>Part 6.2.1</strong> 的論述一致 — PPO 在 reward scale / hyperparameter 上的魯棒性正是它成為 LLM RLHF 預設選擇的原因。</li>
+<li><strong>可重現性</strong>：固定 <code>seed=42</code>，整個 pipeline 從零跑到生成 reward curve 只需要一條命令。</li>
+</ol>
+<h2 id="82-bonus-c-tool-using-react-agentmini-llm-agent">8.2 Bonus C — Tool-Using ReAct Agent（Mini LLM Agent）</h2>
+<h3 id="_4">目標與設計</h3>
+<p>做一個最小可運行的 <strong>ReAct-style agent loop</strong>（呼應 Part 3.3 的 ReAct / Toolformer / Gorilla 系列），具備：
+- 兩個工具：<code>calculator(expression)</code>、<code>wiki_search(query)</code>。
+  - calculator 用 <code>ast</code>-based safe evaluator（<strong>不用 <code>eval()</code> 避免 RCE</strong>）。
+  - wiki_search 查一個內建的迷你 DRL/AI 語料（無網路相依，部署簡單）。
+- 兩個 LLM backend：
+  - <strong>Anthropic Claude</strong>（<code>claude-haiku-4-5-20251001</code>）— 設 <code>ANTHROPIC_API_KEY</code> 即用。
+  - <strong>Offline 確定性 planner</strong> — 無 API key 也能跑，跑出 ReAct trajectory，可作為 unit-test fixture。</p>
+<h3 id="_5">程式碼路徑</h3>
+<pre><code>code/llm_agent_demo.py
+</code></pre>
+<h3 id="offline-backend-3">互動範例（Offline backend，跑 3 個內建問題）</h3>
+<p><strong>Q1: "What is sqrt(144) plus the year AlphaGo played Lee Sedol?"</strong></p>
+<pre><code>[USER] What is sqrt(144) plus the year AlphaGo played Lee Sedol?
+[AGENT] Thought: I need AlphaGo's debut year. I'll check the wiki.
+        Action: wiki_search(AlphaGo)
+[TOOL]  wiki_search('AlphaGo') -&gt; AlphaGo ... match versus Lee Sedol took place in March 2016 ...
+[AGENT] Thought: Good — AlphaGo's Lee-Sedol match was in 2016. Now compute sqrt(144) + 2016.
+        Action: calculator(sqrt(144) + 2016)
+[TOOL]  calculator('sqrt(144) + 2016') -&gt; 2028.0
+[AGENT] FinalAnswer: sqrt(144) = 12 and AlphaGo's Lee-Sedol match was in 2016, so the answer is 2028.0.
+</code></pre>
+<p>這是一個<strong>典型 multi-hop</strong>的問題：必須先查 fact（AlphaGo），再做算術。Agent 正確 chain 兩個工具呼叫。</p>
+<p><strong>Q2: "Tell me about DeepSeek-R1."</strong></p>
+<pre><code>[AGENT] Thought: Let me look up DeepSeek-R1.
+        Action: wiki_search(DeepSeek-R1)
+[TOOL]  wiki_search('DeepSeek-R1') -&gt; DeepSeek-R1 ... pure reinforcement learning from verifiable rewards using GRPO ...
+[AGENT] FinalAnswer: DeepSeek-R1 is an open-weights reasoning model trained with pure RL from verifiable rewards using GRPO. It is the first peer-reviewed LLM in Nature (2025).
+</code></pre>
+<p><strong>Q3: "Compute 2 ** 10 - 24"</strong></p>
+<pre><code>[AGENT] Thought: Pure arithmetic — use calculator.
+        Action: calculator(2 ** 10 - 24)
+[TOOL]  calculator('2 ** 10 - 24') -&gt; 1000
+[AGENT] FinalAnswer: 1000
+</code></pre>
+<h3 id="_6">觀察與對應到報告本體</h3>
+<ol>
+<li><strong>ReAct loop 的本質</strong>：<code>Thought → Action → Observation</code> 循環是 Part 3.3 的核心 — 即使是 100 行程式碼的迷你 agent 也能展示完整的決策迴圈。</li>
+<li><strong>Tool selection</strong>：與 Gorilla / ToolACE 對照 — 我們手動寫了 routing rule；產業界的 SOTA 用大模型 + 微調做工具選擇，但抽象上是同一件事。</li>
+<li><strong>Safety</strong>：calculator 用 AST whitelist 而非 <code>eval()</code>，是 production agent 的最小安全規範 — 對應 Part 3.7.4 我們提到的「reward hacking」與「supply chain」隱憂的子集。</li>
+<li><strong>可演進性</strong>：把 <code>llm_offline</code> 換成 <code>llm_anthropic</code> 就升級成真實 Claude agent；可以再加 web search、bash execution 等工具 — 這正是 Claude Code、OpenAI Operator 走的路線（Part 3.1.1-3.1.2）。</li>
+</ol>
+<h2 id="83-bonus-critical-reflection">8.3 Bonus 的 Critical Reflection</h2>
+<p>兩個 demo 故意保持小：</p>
+<ul>
+<li><strong>PPO demo</strong> 不挑戰 humanoid 或 MuJoCo MJX — 因為 MVP 的目的是「在合理時間內 reproducible」。CartPole 反而最能凸顯 RL 的核心 dynamic：reward → policy update → 行為改善。要把它升級成 Atari、LunarLander 只需要改 <code>env_id</code> 與 <code>total_timesteps</code>。</li>
+<li><strong>LLM agent demo</strong> 不寫複雜的 LangGraph workflow — 因為要展示的是「<strong>ReAct 範式本身的簡潔性</strong>」。一旦這個 100 行 loop 跑通，加 LangGraph、加 memory store、加 multi-agent 都是工程量的線性疊加，而非另一個 paradigm。</li>
+</ul>
+<p>兩個 MVP 共同想說的話：<strong>「DRL 不再是孤立的 algorithm，而是被 foundation models 與 agent loop 包覆的元件。」</strong> PPO 訓的是低層 reactive policy；ReAct agent 是高層 planning loop。<strong>真正的 SOTA（如 Helix、GR00T、Voyager）就是把這兩端整合起來。</strong></p>
+<h1 id="part-9-conclusion-ethics-and-future-directions">Part 9 — Conclusion, Ethics, and Future Directions</h1>
+<h2 id="91">9.1 結論</h2>
+<p>本份 survey 從 <strong>演算法基礎 → 系統平台 → agentic AI → 三個應用領域 → 五條 SOTA 趨勢 → 比較分析 → GitHub 生態 → 兩個 hands-on MVP</strong>，回答了一個核心問題：</p>
+<blockquote>
+<p><strong>2024–2026 之間，Deep Reinforcement Learning 的角色發生了什麼根本性轉變？</strong></p>
+</blockquote>
+<p>答案可以總結為 <strong>三個轉折</strong>：</p>
+<ol>
+<li>
+<p><strong>從「獨立 sub-field」變成「foundation model 的對齊 / 推理元件」。</strong>
+   PPO、GRPO 不再只是訓 robot 用，它們現在每天在 RLHF、RLAIF、RLVR 中對齊 GPT-5、Claude 4.7、Gemini 2.5、DeepSeek-R1 等等模型。DeepSeek-R1 用純 RL with verifiable rewards 訓出可與 o1 競爭的推理能力，且論文是 <strong>首次以 LLM 為主題的 Nature peer-reviewed paper</strong>——這是一個歷史時刻。</p>
+</li>
+<li>
+<p><strong>從「flat policy」走向「dual-system 與 hierarchy」。</strong>
+   Helix（S2 慢 + S1 快）、GR00T N1、Gemini Robotics 1.5、π0.5 等系統共同收斂在「VLM 想 + visuomotor 做」的雙系統架構；agentic AI 端則用 plan-then-execute / Tree-of-Thoughts / MCTS-with-learned-value 把 LLM reasoning 結構化。這呼應了人腦 dual-process theory（System 1 / System 2）。</p>
+</li>
+<li>
+<p><strong>從「在 sim 中 train、在 real 中失敗」走向「differentiable physics + foundation video model 構成的新 sim2real stack」。</strong>
+   Newton（NVIDIA + Google + Disney）、MuJoCo MJX、V-JEPA 2、Genie 3 共同把 robot 訓練拉進「梯度可穿過 simulator、video 作為 imagined env」的新時代。Berkeley 在 RTX 4090 上 15 分鐘訓完 Unitree G1 locomotion 已不是奇蹟。</p>
+</li>
+</ol>
+<h2 id="92">9.2 倫理與安全考量</h2>
+<p>報告也必須誠實面對 DRL + agentic AI 的負面 / 風險面：</p>
+<h3 id="921-reward-hacking-specification-gaming">9.2.1 Reward hacking 與 specification gaming</h3>
+<p>RL agent 永遠在 <strong>「reward 是什麼」與「我們想要什麼」</strong> 之間的縫隙裡找漏洞。2026 年 4 月 UC Berkeley CRDI 公布的「自動 reward-hack 所有八個主流 agent benchmark」攻擊 agent，把這個古老 RL 問題搬到 agentic AI 評估的全新規模上。<strong>Critical</strong>：每個 reward 設計都應被視為一個攻擊面。</p>
+<h3 id="922-sycophancy">9.2.2 Sycophancy 與對齊偏差</h3>
+<p>RLHF / RLAIF 訓出的模型容易「迎合」用戶觀點而非說真話；constitutional AI 雖然降低了部分問題，但對抗 prompt 下仍易崩（arXiv:2504.04918「Constitution or Collapse?」）。同家族 AI labeler 帶來的 self-reinforcing bias 仍是開放問題。</p>
+<h3 id="923">9.2.3 機器人安全</h3>
+<p>humanoid 商用部署（Apollo 在 Mercedes、Figure 03 設計年產 12k 台、1X NEO 開放消費市場）走在 <strong>formal safety certification 之前</strong>——目前沒有任何 humanoid 在 unstructured 家庭環境取得正式安全認證。<strong>Critical</strong>：第一次 RL-driven robot 在私人住家造成傷害事件可能就在 2026–2027 之間發生，產業與監管需要提前對齊。</p>
+<h3 id="924-ai">9.2.4 自主科學 AI 的可重現性</h3>
+<p>AlphaChip（Nature 2021 + 2024 addendum，Markov CACM 2024 批評）、GNoME / A-Lab（2024 Cheetham &amp; Seshadri 批評）展示 Nature cover 不等於 reproducible science。AI Scientist v2 通過 ICLR 2025 workshop peer review 是里程碑，但同年 arXiv:2502.14297 批評其 literature synthesis 薄弱。<strong>Critical</strong>：autonomous science 必須以 open benchmark + independent verification 為前提，否則只是規模化的 confirmation bias。</p>
+<h3 id="925">9.2.5 經濟與社會衝擊</h3>
+<p>agentic coding（GPT-5 SWE-bench 82.7%、Claude Code 等）、agentic web（Mariner、Operator）、humanoid 勞動（Apollo at GXO/Jabil/Mercedes）三線同時推進，<strong>正在重新定義「人類做什麼」的邊界</strong>。Universal verification、職業轉型、公平分配將是 2026–2030 必須面對的政策議題。</p>
+<h2 id="93">9.3 未來研究方向（個人觀點）</h2>
+<p>基於本 survey 的脈絡，我認為以下五個方向值得未來研究投入：</p>
+<ol>
+<li><strong>World-model RL on humanoids</strong>：DreamerV3 + Genie 3 風格 video model + Helix dual-system 的整合 — 把「在腦中模擬」實際應用到人形機器人上。</li>
+<li><strong>Verifier-driven agent training for non-mathematical domains</strong>：把 DeepSeek-R1 / AlphaProof 的 RLVR 思路擴到生物、化學、UI 任務上 — 關鍵是設計「不會被 hacked 的 verifier」。</li>
+<li><strong>Cross-embodiment foundation policies</strong>：OpenVLA、Octo、CrossFormer 開頭，但離真正的「<strong>a single weight that drives any robot</strong>」仍遠 — 需要更大規模的 multi-embodiment data + 更聰明的 action space unification。</li>
+<li><strong>Agent reliability engineering</strong>：τ-bench 揭露的 pass^k 問題不是 model issue 而是 <strong>system engineering</strong> issue — 需要 RL-style sequential improvement + traditional SE practice（retry / timeout / circuit-breaker）的融合。</li>
+<li><strong>MARL + LLM 真正融合</strong>：population-based training（AlphaStar 風格）套到 LLM agent；多 agent debate / negotiation 用 self-play 風格 RL — 這個交叉點目前還沒有 SOTA 代表作。</li>
+</ol>
+<h2 id="94">9.4 個人收穫</h2>
+<p>撰寫本 survey 的過程中我最深的感受：<strong>2024–2026 的 DRL 已經不是 2018 年的 DRL</strong>。</p>
+<ul>
+<li>2018 年的 DRL 是 PPO + Mujoco + 一張 RTX 1080 + 你自己的 reward function。</li>
+<li>2026 年的 DRL 是 GRPO + RLVR + RTX Pro 6000 cluster + LLM 生成 reward + foundation policy。</li>
+</ul>
+<p>這個轉變的速度，加上 agentic AI 的勢頭，讓我相信 2027–2028 之間我們會看到：(a) 第一個能在你家廚房 90% 成功率清理 30 分鐘的 humanoid 商品；(b) 第一篇 AI 全自動撰寫並通過 main-track（非 workshop） peer review 的論文；(c) RL-trained 軟體 agent 在 SWE-bench Verified 衝破 90%。</p>
+<p>當這些里程碑被達成的時候，本 survey 整理的演算法、平台、agent 系統將是回顧那段歷史的重要參考。</p>
+<h1 id="references">References</h1>
+<p>本份報告引用涵蓋 <em>Nature</em>、<em>Science</em>、NeurIPS / ICML / ICLR / CoRL / RSS / CVPR、AAAI、arXiv preprint，以及產業界 technical blog / product launch。按出現章節順序排列。</p>
+<h2 id="part-1-drl-fundamentals">Part 1 — DRL Fundamentals</h2>
+<ol>
+<li>Mnih, V. et al. "Human-level control through deep reinforcement learning." <em>Nature</em>, 518, 529–533 (2015).</li>
+<li>van Hasselt, H., Guez, A., &amp; Silver, D. "Deep reinforcement learning with double Q-learning." <em>AAAI</em> (2016).</li>
+<li>Schulman, J., Wolski, F., Dhariwal, P., Radford, A., &amp; Klimov, O. "Proximal policy optimization algorithms." <em>arXiv:1707.06347</em> (2017).</li>
+<li>Andrychowicz, M. et al. "What matters in on-policy reinforcement learning? A large-scale empirical study." <em>ICLR</em> (2021).</li>
+<li>Mnih, V. et al. "Asynchronous methods for deep reinforcement learning." <em>ICML</em> (2016).</li>
+<li>Haarnoja, T., Zhou, A., Abbeel, P., &amp; Levine, S. "Soft actor-critic." <em>ICML</em> (2018).</li>
+<li>Fujimoto, S., Hoof, H., &amp; Meger, D. "Addressing function approximation error in actor-critic methods." <em>ICML</em> (2018).</li>
+<li>Schrittwieser, J. et al. "Mastering Atari, Go, chess and shogi by planning with a learned model." <em>Nature</em>, 588, 604–609 (2020).</li>
+<li>Chen, L. et al. "Decision Transformer: Reinforcement learning via sequence modeling." <em>NeurIPS</em> (2021).</li>
+<li>Fujimoto, S., Meger, D., &amp; Precup, D. "Off-policy deep reinforcement learning without exploration (BCQ)." <em>ICML</em> (2019).</li>
+<li>Kumar, A., Zhou, A., Tucker, G., &amp; Levine, S. "Conservative Q-learning for offline reinforcement learning." <em>NeurIPS</em> (2020).</li>
+<li>Kostrikov, I., Nair, A., &amp; Levine, S. "Offline reinforcement learning with implicit Q-learning." <em>ICLR</em> (2022).</li>
+<li>Sutton, R. S., Precup, D., &amp; Singh, S. "Between MDPs and semi-MDPs: A framework for temporal abstraction in reinforcement learning." <em>Artificial Intelligence</em>, 112(1-2), 181–211 (1999).</li>
+<li>Vezhnevets, A. S. et al. "FeUdal networks for hierarchical reinforcement learning." <em>ICML</em> (2017).</li>
+<li>Nachum, O., Gu, S. S., Lee, H., &amp; Levine, S. "Data-efficient hierarchical reinforcement learning (HIRO)." <em>NeurIPS</em> (2018).</li>
+</ol>
+<h2 id="part-2-systems-platforms">Part 2 — Systems &amp; Platforms</h2>
+<ol start="16">
+<li>Fan, L. et al. "MineDojo: Building open-ended embodied agents with internet-scale knowledge." <em>NeurIPS Datasets &amp; Benchmarks Track</em> (2022).</li>
+<li>Wang, G. et al. "Voyager: An open-ended embodied agent with large language models." <em>arXiv:2305.16291</em> (2023).</li>
+<li>Kim, M. J. et al. "OpenVLA: An open-source vision-language-action model." <em>arXiv:2406.09246</em> (2024).</li>
+</ol>
+<h2 id="part-3-agentic-ai">Part 3 — Agentic AI</h2>
+<ol start="19">
+<li>Anthropic. "Introducing the Model Context Protocol." <a href="https://www.anthropic.com/news/model-context-protocol">https://www.anthropic.com/news/model-context-protocol</a> (Nov 2024).</li>
+<li>Anthropic. "Donating the Model Context Protocol and establishing the Agentic AI Foundation." (2025).</li>
+<li>OpenAI. "Introducing GPT-5." <a href="https://openai.com/index/introducing-gpt-5/">https://openai.com/index/introducing-gpt-5/</a> (2025).</li>
+<li>OpenAI. "Computer-Using Agent." <a href="https://openai.com/index/computer-using-agent/">https://openai.com/index/computer-using-agent/</a> (Jan 2025).</li>
+<li>OpenAI. "Introducing deep research." <a href="https://openai.com/index/introducing-deep-research/">https://openai.com/index/introducing-deep-research/</a> (Feb 2025).</li>
+<li>Google DeepMind. "Project Astra / Mariner." <a href="https://blog.google/technology/google-deepmind/google-gemini-ai-update-december-2024/">https://blog.google/technology/google-deepmind/google-gemini-ai-update-december-2024/</a> (Dec 2024).</li>
+<li>Rafailov, R. et al. "Direct preference optimization: Your language model is secretly a reward model." <em>NeurIPS</em> (2023). arXiv:2305.18290.</li>
+<li>Ethayarajh, K. et al. "KTO: Model alignment as prospect theoretic optimization." <em>ICML</em> (2024). arXiv:2402.01306.</li>
+<li>Bai, Y. et al. "Constitutional AI: Harmlessness from AI feedback." <em>arXiv:2212.08073</em> (2022).</li>
+<li>Lee, H. et al. "RLAIF vs. RLHF: Scaling reinforcement learning from human feedback with AI feedback." <em>ICML</em> (2024). arXiv:2309.00267.</li>
+<li>Lightman, H. et al. "Let's verify step by step." <em>ICLR</em> (2024). arXiv:2305.20050.</li>
+<li>Guo, D. et al. "DeepSeek-R1: Incentivizing reasoning capability in LLMs via reinforcement learning." <em>Nature</em> (2025).</li>
+<li>Yao, S. et al. "ReAct: Synergizing reasoning and acting in language models." <em>ICLR</em> (2023).</li>
+<li>Patil, S. G. et al. "Gorilla: Large language model connected with massive APIs." <em>NeurIPS</em> (2024).</li>
+<li>Park, J. S. et al. "Generative agents: Interactive simulacra of human behavior." <em>UIST</em> (2023). arXiv:2304.03442.</li>
+<li>Li, G. et al. "CAMEL: Communicative agents for 'mind' exploration of LLM society." <em>NeurIPS</em> (2023). arXiv:2303.17760.</li>
+<li>Hong, S. et al. "MetaGPT: Meta programming for a multi-agent collaborative framework." <em>ICLR</em> (2024). arXiv:2308.00352.</li>
+<li>Qian, C. et al. "ChatDev: Communicative agents for software development." <em>ACL</em> (2024). arXiv:2307.07924.</li>
+<li>Wu, Q. et al. "AutoGen: Enabling next-gen LLM applications via multi-agent conversation." <em>ICLR LLM Agents Workshop</em> (2024).</li>
+<li>SIMA Team. "Scaling instructable agents across many simulated worlds." <em>DeepMind</em> arXiv:2404.10179 (2024).</li>
+<li>SIMA Team. "SIMA 2: An embodied agent that plays, reasons and learns with you in virtual 3D worlds." <em>arXiv:2512.04797</em> (2025).</li>
+<li>Yang, J. et al. "Magma: A foundation model for multimodal AI agents." <em>CVPR</em> (2025). arXiv:2502.13130.</li>
+<li>Zelikman, E. et al. "STaR: Bootstrapping reasoning with reasoning." <em>NeurIPS</em> (2022). arXiv:2203.14465.</li>
+<li>Yuan, W. et al. "Self-Rewarding Language Models." <em>ICML</em> (2024). arXiv:2401.10020.</li>
+<li>Packer, C. et al. "MemGPT: Towards LLMs as operating systems." <em>arXiv:2310.08560</em> (2023).</li>
+<li>Jimenez, C. E. et al. "SWE-bench: Can language models resolve real-world GitHub issues?" <em>ICLR</em> (2024).</li>
+<li>Mialon, G. et al. "GAIA: A benchmark for general AI assistants." <em>ICLR</em> (2024).</li>
+<li>Liu, X. et al. "AgentBench: Evaluating LLMs as agents." <em>ICLR</em> (2024).</li>
+<li>Zhou, S. et al. "WebArena: A realistic web environment for building autonomous agents." <em>ICLR</em> (2024).</li>
+<li>Xie, T. et al. "OSWorld: Benchmarking multimodal agents for open-ended tasks in real computer environments." <em>NeurIPS</em> (2024).</li>
+</ol>
+<h2 id="part-4-applications">Part 4 — Applications</h2>
+<h3 id="robotics-embodied">Robotics &amp; Embodied</h3>
+<ol start="49">
+<li>Brohan, A. et al. "RT-2: Vision-language-action models transfer web knowledge to robotic control." <em>arXiv:2307.15818</em> (2023).</li>
+<li>Physical Intelligence. "π0.5: A vision-language-action model with open-world generalization." <em>arXiv:2504.16054</em> (2025).</li>
+<li>Figure AI. "Introducing Helix." <a href="https://www.figure.ai/news/helix">https://www.figure.ai/news/helix</a> (Feb 2025).</li>
+<li>NVIDIA Research. "GR00T N1: An open foundation model for generalist humanoid robots." <em>arXiv:2503.14734</em> (2025).</li>
+<li>Google DeepMind. "Gemini Robotics: Bringing AI into the physical world." <em>arXiv:2503.20020</em> (2025).</li>
+<li>Chi, C. et al. "Diffusion policy: Visuomotor policy learning via action diffusion." <em>RSS</em> (2023); <em>IJRR</em> (2025). arXiv:2303.04137.</li>
+<li>Ze, Y. et al. "3D Diffusion Policy." <em>arXiv:2403.03954</em> (2024).</li>
+<li>Octo Model Team. "Octo: An open-source generalist robot policy." <em>RSS</em> (2024). arXiv:2405.12213.</li>
+<li>Ma, Y. J. et al. "Eureka: Human-level reward design via coding large language models." <em>ICLR</em> (2024).</li>
+<li>Ma, Y. J. et al. "DrEureka: Language model guided sim-to-real transfer." <em>RSS</em> (2024). arXiv:2406.01967.</li>
+<li>Luo, J. et al. "SERL: A software suite for sample-efficient robotic reinforcement learning." <em>arXiv:2401.16013</em> (2024).</li>
+<li>He, T. et al. "OmniH2O: Universal and dexterous human-to-humanoid whole-body teleoperation and learning." <em>CoRL</em> (2024). arXiv:2406.08858.</li>
+<li>He, T. et al. "ASAP: Aligning simulation and real-world physics for learning agile humanoid whole-body skills." (2025).</li>
+<li>NVIDIA Isaac Lab. <a href="https://github.com/isaac-sim/IsaacLab">https://github.com/isaac-sim/IsaacLab</a> (2024–2025).</li>
+<li>NVIDIA, Google, Disney. "Newton: An open-source physics engine for robotics." GTC (2025).</li>
+<li>MuJoCo Team. "MuJoCo Playground." <em>arXiv:2502.08844</em> (2025).</li>
+<li>Khazatsky, A. et al. "DROID: A large-scale in-the-wild robot manipulation dataset." <em>RSS</em> (2024). arXiv:2403.12945.</li>
+<li>Open X-Embodiment Collaboration. "Open X-Embodiment: Robotic learning datasets and RT-X models." (2024).</li>
+<li>Liu, B. et al. "LIBERO: Benchmarking knowledge transfer for lifelong robot learning." <em>NeurIPS</em> (2024).</li>
+<li>Nasiriany, S. et al. "RoboCasa: Large-scale simulation of everyday tasks for generalist robots." <em>RSS</em> (2024). arXiv:2406.02523.</li>
+<li>Tao, S. et al. "ManiSkill3: GPU parallelized robotics simulation and rendering for generalizable embodied AI." (2024). arXiv:2410.00425.</li>
+</ol>
+<h3 id="game-ai">Game AI</h3>
+<ol start="70">
+<li>Silver, D. et al. "Mastering the game of Go with deep neural networks and tree search." <em>Nature</em>, 529 (2016).</li>
+<li>Silver, D. et al. "Mastering the game of Go without human knowledge." <em>Nature</em>, 550 (2017).</li>
+<li>Silver, D. et al. "A general reinforcement learning algorithm that masters chess, shogi, and Go through self-play." <em>Science</em>, 362 (2018).</li>
+<li>Vinyals, O. et al. "Grandmaster level in StarCraft II using multi-agent reinforcement learning." <em>Nature</em>, 575 (2019).</li>
+<li>Berner, C. et al. "Dota 2 with large scale deep reinforcement learning." <em>arXiv:1912.06680</em> (2019).</li>
+<li>Meta FAIR. "Human-level play in the game of Diplomacy by combining language models with strategic reasoning." <em>Science</em>, 378 (2022).</li>
+<li>Perolat, J. et al. "Mastering the game of Stratego with model-free multiagent reinforcement learning." <em>Science</em>, 378 (2022).</li>
+<li>Wurman, P. R. et al. "Outracing champion Gran Turismo drivers with deep reinforcement learning." <em>Nature</em>, 602 (2022).</li>
+<li>Vasco, M. et al. "Super-human performance in Gran Turismo Sport using deep reinforcement learning." <em>RLC</em> (2024). arXiv:2406.12563.</li>
+<li>Baker, B. et al. "Video PreTraining (VPT): Learning to act by watching unlabeled online videos." <em>NeurIPS</em> (2022).</li>
+<li>Hafner, D. et al. "Mastering diverse control tasks through world models (DreamerV3)." <em>Nature</em>, 640 (2025). arXiv:2301.04104.</li>
+<li>Wang, R. et al. "Paired Open-Ended Trailblazer (POET)." <em>GECCO</em> (2019).</li>
+<li>DeepMind Team. "Open-ended learning leads to generally capable agents (XLand)." <em>arXiv:2107.12808</em> (2021).</li>
+<li>Trinh, T. H. et al. "Solving olympiad geometry without human demonstrations (AlphaGeometry)." <em>Nature</em>, 625 (2024).</li>
+<li>AlphaProof &amp; AlphaGeometry Teams. "Solving olympiad-level math problems with AI." <em>Nature</em> (Nov 2025).</li>
+</ol>
+<h3 id="ai-for-science">AI for Science</h3>
+<ol start="85">
+<li>Jumper, J. et al. "Highly accurate protein structure prediction with AlphaFold." <em>Nature</em>, 596 (2021).</li>
+<li>Abramson, J. et al. "Accurate structure prediction of biomolecular interactions with AlphaFold 3." <em>Nature</em>, 630 (2024).</li>
+<li>Watson, J. L. et al. "De novo design of protein structure and function with RFdiffusion." <em>Nature</em>, 620 (2023).</li>
+<li>Krishna, R. et al. "Generalized biomolecular modeling and design with RoseTTAFold All-Atom." <em>Science</em>, 384 (2024).</li>
+<li>Hayes, T. et al. "Simulating 500 million years of evolution with a language model (ESM-3)." <em>bioRxiv</em> (2024).</li>
+<li>Loeffler, H. H. et al. "REINVENT 4: Modern AI-driven generative molecule design." <em>J. Cheminformatics</em> (2024).</li>
+<li>Merchant, A. et al. "Scaling deep learning for materials discovery (GNoME)." <em>Nature</em>, 624 (2023).</li>
+<li>Szymanski, N. J. et al. "An autonomous laboratory for the accelerated synthesis of novel materials (A-Lab)." <em>Nature</em>, 624 (2023).</li>
+<li>Fawzi, A. et al. "Discovering faster matrix multiplication algorithms with reinforcement learning (AlphaTensor)." <em>Nature</em>, 610 (2022).</li>
+<li>Romera-Paredes, B. et al. "Mathematical discoveries from program search with large language models (FunSearch)." <em>Nature</em>, 625 (2023).</li>
+<li>Mankowitz, D. J. et al. "Faster sorting algorithms discovered using deep reinforcement learning (AlphaDev)." <em>Nature</em>, 618 (2023).</li>
+<li>Degrave, J. et al. "Magnetic control of tokamak plasmas through deep reinforcement learning." <em>Nature</em>, 602 (2022).</li>
+<li>Seo, J. et al. "Avoiding fusion plasma tearing instability with deep reinforcement learning." <em>Nature</em>, 626 (2024).</li>
+<li>Mirhoseini, A. et al. "A graph placement methodology for fast chip design (AlphaChip)." <em>Nature</em>, 594 (2021); Addendum (2024).</li>
+<li>Boiko, D. A. et al. "Autonomous chemical research with large language models (Coscientist)." <em>Nature</em>, 624 (2023).</li>
+<li>Yamada, Y. et al. "The AI Scientist v2: Workshop-level automated scientific discovery." <em>arXiv:2504.08066</em> (2025).</li>
+</ol>
+<h2 id="part-7-open-source-ecosystem-selected">Part 7 — Open Source Ecosystem (selected)</h2>
+<ul>
+<li><a href="https://github.com/DLR-RM/stable-baselines3">DLR-RM/stable-baselines3</a></li>
+<li><a href="https://github.com/ray-project/ray">ray-project/ray</a> (RLlib)</li>
+<li><a href="https://github.com/vwxyzjn/cleanrl">vwxyzjn/cleanrl</a></li>
+<li><a href="https://github.com/openai/spinningup">openai/spinningup</a></li>
+<li><a href="https://github.com/isaac-sim/IsaacLab">isaac-sim/IsaacLab</a></li>
+<li><a href="https://github.com/carla-simulator/carla">carla-simulator/carla</a></li>
+<li><a href="https://github.com/facebookresearch/habitat-lab">facebookresearch/habitat-lab</a></li>
+<li><a href="https://github.com/AI4Finance-Foundation/FinRL">AI4Finance-Foundation/FinRL</a></li>
+<li><a href="https://github.com/MineDojo/MineDojo">MineDojo/MineDojo</a></li>
+<li><a href="https://github.com/Unity-Technologies/ml-agents">Unity-Technologies/ml-agents</a></li>
+<li><a href="https://github.com/openvla/openvla">openvla/openvla</a></li>
+<li><a href="https://github.com/Physical-Intelligence/openpi">Physical-Intelligence/openpi</a></li>
+<li><a href="https://github.com/google-deepmind/mujoco_playground">google-deepmind/mujoco_playground</a></li>
+<li><a href="https://github.com/deepseek-ai/DeepSeek-R1">deepseek-ai/DeepSeek-R1</a></li>
+<li><a href="https://github.com/modelcontextprotocol/specification">modelcontextprotocol/specification</a></li>
+<li><a href="https://github.com/langchain-ai/langgraph">langchain-ai/langgraph</a></li>
+<li><a href="https://github.com/eureka-research/Eureka">eureka-research/Eureka</a></li>
+<li><a href="https://github.com/rail-berkeley/serl">rail-berkeley/serl</a></li>
+</ul>
+<div class="footnote">
+<hr />
+<ol>
+<li id="fn:mnih2015">
+<p>Mnih, V. et al. "Human-level control through deep reinforcement learning." <em>Nature</em>, 518, 529–533 (2015).&#160;<a class="footnote-backref" href="#fnref:mnih2015" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+</li>
+<li id="fn:vanhasselt2016">
+<p>van Hasselt, H., Guez, A., &amp; Silver, D. "Deep reinforcement learning with double Q-learning." <em>AAAI</em> (2016).&#160;<a class="footnote-backref" href="#fnref:vanhasselt2016" title="Jump back to footnote 2 in the text">&#8617;</a></p>
+</li>
+<li id="fn:schulman2017ppo">
+<p>Schulman, J., Wolski, F., Dhariwal, P., Radford, A., &amp; Klimov, O. "Proximal policy optimization algorithms." <em>arXiv:1707.06347</em> (2017).&#160;<a class="footnote-backref" href="#fnref:schulman2017ppo" title="Jump back to footnote 3 in the text">&#8617;</a></p>
+</li>
+<li id="fn:andrychowicz2021">
+<p>Andrychowicz, M. et al. "What matters in on-policy reinforcement learning? A large-scale empirical study." <em>ICLR</em> (2021).&#160;<a class="footnote-backref" href="#fnref:andrychowicz2021" title="Jump back to footnote 4 in the text">&#8617;</a></p>
+</li>
+<li id="fn:mnih2016a3c">
+<p>Mnih, V. et al. "Asynchronous methods for deep reinforcement learning." <em>ICML</em> (2016).&#160;<a class="footnote-backref" href="#fnref:mnih2016a3c" title="Jump back to footnote 5 in the text">&#8617;</a></p>
+</li>
+<li id="fn:haarnoja2018sac">
+<p>Haarnoja, T., Zhou, A., Abbeel, P., &amp; Levine, S. "Soft actor-critic." <em>ICML</em> (2018).&#160;<a class="footnote-backref" href="#fnref:haarnoja2018sac" title="Jump back to footnote 6 in the text">&#8617;</a></p>
+</li>
+<li id="fn:fujimoto2018td3">
+<p>Fujimoto, S., Hoof, H., &amp; Meger, D. "Addressing function approximation error in actor-critic methods." <em>ICML</em> (2018).&#160;<a class="footnote-backref" href="#fnref:fujimoto2018td3" title="Jump back to footnote 7 in the text">&#8617;</a></p>
+</li>
+<li id="fn:schrittwieser2020muzero">
+<p>Schrittwieser, J. et al. "Mastering Atari, Go, chess and shogi by planning with a learned model." <em>Nature</em>, 588, 604–609 (2020).&#160;<a class="footnote-backref" href="#fnref:schrittwieser2020muzero" title="Jump back to footnote 8 in the text">&#8617;</a><a class="footnote-backref" href="#fnref2:schrittwieser2020muzero" title="Jump back to footnote 8 in the text">&#8617;</a></p>
+</li>
+<li id="fn:chen2021dt">
+<p>Chen, L. et al. "Decision Transformer: Reinforcement learning via sequence modeling." <em>NeurIPS</em> (2021).&#160;<a class="footnote-backref" href="#fnref:chen2021dt" title="Jump back to footnote 9 in the text">&#8617;</a></p>
+</li>
+<li id="fn:fujimoto2019bcq">
+<p>Fujimoto, S., Meger, D., &amp; Precup, D. "Off-policy deep reinforcement learning without exploration." <em>ICML</em> (2019).&#160;<a class="footnote-backref" href="#fnref:fujimoto2019bcq" title="Jump back to footnote 10 in the text">&#8617;</a></p>
+</li>
+<li id="fn:kumar2020cql">
+<p>Kumar, A., Zhou, A., Tucker, G., &amp; Levine, S. "Conservative Q-learning for offline reinforcement learning." <em>NeurIPS</em> (2020).&#160;<a class="footnote-backref" href="#fnref:kumar2020cql" title="Jump back to footnote 11 in the text">&#8617;</a></p>
+</li>
+<li id="fn:kostrikov2022iql">
+<p>Kostrikov, I., Nair, A., &amp; Levine, S. "Offline reinforcement learning with implicit Q-learning." <em>ICLR</em> (2022).&#160;<a class="footnote-backref" href="#fnref:kostrikov2022iql" title="Jump back to footnote 12 in the text">&#8617;</a></p>
+</li>
+<li id="fn:sutton1999options">
+<p>Sutton, R. S., Precup, D., &amp; Singh, S. "Between MDPs and semi-MDPs: A framework for temporal abstraction in reinforcement learning." <em>Artificial Intelligence</em>, 112(1-2), 181–211 (1999).&#160;<a class="footnote-backref" href="#fnref:sutton1999options" title="Jump back to footnote 13 in the text">&#8617;</a></p>
+</li>
+<li id="fn:vezhnevets2017fun">
+<p>Vezhnevets, A. S. et al. "FeUdal networks for hierarchical reinforcement learning." <em>ICML</em> (2017).&#160;<a class="footnote-backref" href="#fnref:vezhnevets2017fun" title="Jump back to footnote 14 in the text">&#8617;</a></p>
+</li>
+<li id="fn:nachum2018hiro">
+<p>Nachum, O., Gu, S. S., Lee, H., &amp; Levine, S. "Data-efficient hierarchical reinforcement learning." <em>NeurIPS</em> (2018).&#160;<a class="footnote-backref" href="#fnref:nachum2018hiro" title="Jump back to footnote 15 in the text">&#8617;</a></p>
+</li>
+<li id="fn:fan2022minedojo">
+<p>Fan, L. et al. "MineDojo: Building open-ended embodied agents with internet-scale knowledge." <em>NeurIPS Datasets and Benchmarks Track</em> (2022).&#160;<a class="footnote-backref" href="#fnref:fan2022minedojo" title="Jump back to footnote 16 in the text">&#8617;</a></p>
+</li>
+<li id="fn:wang2023voyager">
+<p>Wang, G. et al. "Voyager: An open-ended embodied agent with large language models." <em>arXiv:2305.16291</em> (2023).&#160;<a class="footnote-backref" href="#fnref:wang2023voyager" title="Jump back to footnote 17 in the text">&#8617;</a></p>
+</li>
+<li id="fn:kim2024openvla">
+<p>Kim, M. J. et al. "OpenVLA: An open-source vision-language-action model." <em>arXiv:2406.09246</em> (2024).&#160;<a class="footnote-backref" href="#fnref:kim2024openvla" title="Jump back to footnote 18 in the text">&#8617;</a><a class="footnote-backref" href="#fnref2:kim2024openvla" title="Jump back to footnote 18 in the text">&#8617;</a></p>
+</li>
+<li id="fn:anthropic2025mcp">
+<p>Anthropic. "Donating the Model Context Protocol and establishing the Agentic AI Foundation." (2025).&#160;<a class="footnote-backref" href="#fnref:anthropic2025mcp" title="Jump back to footnote 19 in the text">&#8617;</a></p>
+</li>
+<li id="fn:rafailov2023dpo">
+<p>Rafailov, R. et al. "Direct preference optimization: Your language model is secretly a reward model." <em>NeurIPS</em> (2023). arXiv:2305.18290.&#160;<a class="footnote-backref" href="#fnref:rafailov2023dpo" title="Jump back to footnote 20 in the text">&#8617;</a></p>
+</li>
+<li id="fn:ethayarajh2024kto">
+<p>Ethayarajh, K. et al. "KTO: Model alignment as prospect theoretic optimization." <em>ICML</em> (2024). arXiv:2402.01306.&#160;<a class="footnote-backref" href="#fnref:ethayarajh2024kto" title="Jump back to footnote 21 in the text">&#8617;</a></p>
+</li>
+<li id="fn:bai2022constitutional">
+<p>Bai, Y. et al. "Constitutional AI: Harmlessness from AI feedback." <em>arXiv:2212.08073</em> (2022).&#160;<a class="footnote-backref" href="#fnref:bai2022constitutional" title="Jump back to footnote 22 in the text">&#8617;</a></p>
+</li>
+<li id="fn:lee2024rlaif">
+<p>Lee, H. et al. "RLAIF vs. RLHF: Scaling reinforcement learning from human feedback with AI feedback." <em>ICML</em> (2024). arXiv:2309.00267.&#160;<a class="footnote-backref" href="#fnref:lee2024rlaif" title="Jump back to footnote 23 in the text">&#8617;</a></p>
+</li>
+<li id="fn:lightman2024verify">
+<p>Lightman, H. et al. "Let's verify step by step." <em>ICLR</em> (2024). arXiv:2305.20050.&#160;<a class="footnote-backref" href="#fnref:lightman2024verify" title="Jump back to footnote 24 in the text">&#8617;</a></p>
+</li>
+<li id="fn:deepseek2025r1">
+<p>Guo, D. et al. "DeepSeek-R1: Incentivizing reasoning capability in LLMs via reinforcement learning." <em>Nature</em> (2025).&#160;<a class="footnote-backref" href="#fnref:deepseek2025r1" title="Jump back to footnote 25 in the text">&#8617;</a></p>
+</li>
+<li id="fn:yao2023react">
+<p>Yao, S. et al. "ReAct: Synergizing reasoning and acting in language models." <em>ICLR</em> (2023).&#160;<a class="footnote-backref" href="#fnref:yao2023react" title="Jump back to footnote 26 in the text">&#8617;</a></p>
+</li>
+<li id="fn:patil2024gorilla">
+<p>Patil, S. G. et al. "Gorilla: Large language model connected with massive APIs." <em>NeurIPS</em> (2024).&#160;<a class="footnote-backref" href="#fnref:patil2024gorilla" title="Jump back to footnote 27 in the text">&#8617;</a></p>
+</li>
+<li id="fn:park2023generative">
+<p>Park, J. S. et al. "Generative agents: Interactive simulacra of human behavior." <em>UIST</em> (2023). arXiv:2304.03442.&#160;<a class="footnote-backref" href="#fnref:park2023generative" title="Jump back to footnote 28 in the text">&#8617;</a></p>
+</li>
+<li id="fn:hong2024metagpt">
+<p>Hong, S. et al. "MetaGPT: Meta programming for a multi-agent collaborative framework." <em>ICLR</em> (2024).&#160;<a class="footnote-backref" href="#fnref:hong2024metagpt" title="Jump back to footnote 29 in the text">&#8617;</a></p>
+</li>
+<li id="fn:deepmind2024sima">
+<p>SIMA Team. "Scaling instructable agents across many simulated worlds." <em>DeepMind</em> (2024). arXiv:2404.10179.&#160;<a class="footnote-backref" href="#fnref:deepmind2024sima" title="Jump back to footnote 30 in the text">&#8617;</a></p>
+</li>
+<li id="fn:magma2025">
+<p>Yang, J. et al. "Magma: A foundation model for multimodal AI agents." <em>CVPR</em> (2025). arXiv:2502.13130.&#160;<a class="footnote-backref" href="#fnref:magma2025" title="Jump back to footnote 31 in the text">&#8617;</a><a class="footnote-backref" href="#fnref2:magma2025" title="Jump back to footnote 31 in the text">&#8617;</a></p>
+</li>
+<li id="fn:yuan2024selfrewarding">
+<p>Yuan, W. et al. "Self-Rewarding Language Models." <em>ICML</em> (2024). arXiv:2401.10020.&#160;<a class="footnote-backref" href="#fnref:yuan2024selfrewarding" title="Jump back to footnote 32 in the text">&#8617;</a></p>
+</li>
+<li id="fn:packer2023memgpt">
+<p>Packer, C. et al. "MemGPT: Towards LLMs as operating systems." <em>arXiv:2310.08560</em> (2023).&#160;<a class="footnote-backref" href="#fnref:packer2023memgpt" title="Jump back to footnote 33 in the text">&#8617;</a></p>
+</li>
+<li id="fn:pi2024pi0">
+<p>Physical Intelligence. "π0 / π0-FAST / π0.5: A vision-language-action flow model for general robot control." (2024–2025). arXiv:2504.16054.&#160;<a class="footnote-backref" href="#fnref:pi2024pi0" title="Jump back to footnote 34 in the text">&#8617;</a></p>
+</li>
+<li id="fn:figure2025helix">
+<p>Figure AI. "Introducing Helix: A vision-language-action model for humanoid control." (2025).&#160;<a class="footnote-backref" href="#fnref:figure2025helix" title="Jump back to footnote 35 in the text">&#8617;</a></p>
+</li>
+<li id="fn:nvidia2025groot">
+<p>NVIDIA Research. "Isaac GR00T N1: A foundation model for humanoid robots." <em>arXiv:2503.14734</em> (2025).&#160;<a class="footnote-backref" href="#fnref:nvidia2025groot" title="Jump back to footnote 36 in the text">&#8617;</a></p>
+</li>
+<li id="fn:deepmind2025geminirobotics">
+<p>Google DeepMind. "Gemini Robotics: Bringing AI into the physical world." <em>arXiv:2503.20020</em> (2025).&#160;<a class="footnote-backref" href="#fnref:deepmind2025geminirobotics" title="Jump back to footnote 37 in the text">&#8617;</a></p>
+</li>
+<li id="fn:chi2023dp">
+<p>Chi, C. et al. "Diffusion policy: Visuomotor policy learning via action diffusion." <em>RSS</em> (2023); <em>IJRR</em> (2025). arXiv:2303.04137.&#160;<a class="footnote-backref" href="#fnref:chi2023dp" title="Jump back to footnote 38 in the text">&#8617;</a></p>
+</li>
+<li id="fn:ze2024dp3">
+<p>Ze, Y. et al. "3D diffusion policy." <em>arXiv:2403.03954</em> (2024).&#160;<a class="footnote-backref" href="#fnref:ze2024dp3" title="Jump back to footnote 39 in the text">&#8617;</a></p>
+</li>
+<li id="fn:team2024octo">
+<p>Octo Model Team. "Octo: An open-source generalist robot policy." <em>RSS</em> (2024). arXiv:2405.12213.&#160;<a class="footnote-backref" href="#fnref:team2024octo" title="Jump back to footnote 40 in the text">&#8617;</a></p>
+</li>
+<li id="fn:ma2024eureka">
+<p>Ma, Y. J. et al. "Eureka: Human-level reward design via coding large language models." <em>ICLR</em> (2024).&#160;<a class="footnote-backref" href="#fnref:ma2024eureka" title="Jump back to footnote 41 in the text">&#8617;</a></p>
+</li>
+<li id="fn:luo2024serl">
+<p>Luo, J. et al. "SERL: A software suite for sample-efficient robotic reinforcement learning." <em>arXiv:2401.16013</em> (2024).&#160;<a class="footnote-backref" href="#fnref:luo2024serl" title="Jump back to footnote 42 in the text">&#8617;</a></p>
+</li>
+<li id="fn:he2024omniH2O">
+<p>He, T. et al. "OmniH2O: Universal and dexterous human-to-humanoid whole-body teleoperation and learning." <em>CoRL</em> (2024). arXiv:2406.08858.&#160;<a class="footnote-backref" href="#fnref:he2024omniH2O" title="Jump back to footnote 43 in the text">&#8617;</a></p>
+</li>
+<li id="fn:he2025asap">
+<p>He, T. et al. "ASAP: Aligning simulation and real-world physics for learning agile humanoid whole-body skills." (2025).&#160;<a class="footnote-backref" href="#fnref:he2025asap" title="Jump back to footnote 44 in the text">&#8617;</a></p>
+</li>
+<li id="fn:vinyals2019alphastar">
+<p>Vinyals, O. et al. "Grandmaster level in StarCraft II using multi-agent reinforcement learning." <em>Nature</em>, 575 (2019).&#160;<a class="footnote-backref" href="#fnref:vinyals2019alphastar" title="Jump back to footnote 45 in the text">&#8617;</a></p>
+</li>
+<li id="fn:hafner2025dreamerv3">
+<p>Hafner, D. et al. "Mastering diverse control tasks through world models." <em>Nature</em>, 640 (2025). arXiv:2301.04104.&#160;<a class="footnote-backref" href="#fnref:hafner2025dreamerv3" title="Jump back to footnote 46 in the text">&#8617;</a></p>
+</li>
+<li id="fn:deepmind2025alphaproof">
+<p>AlphaProof and AlphaGeometry teams. "Solving olympiad-level math problems with AI." <em>Nature</em> (Nov 2025).&#160;<a class="footnote-backref" href="#fnref:deepmind2025alphaproof" title="Jump back to footnote 47 in the text">&#8617;</a></p>
+</li>
+<li id="fn:sima2025v2">
+<p>SIMA Team. "SIMA 2: An embodied agent that plays, reasons and learns with you in virtual 3D worlds." <em>arXiv:2512.04797</em> (2025).&#160;<a class="footnote-backref" href="#fnref:sima2025v2" title="Jump back to footnote 48 in the text">&#8617;</a></p>
+</li>
+<li id="fn:watson2023rfdiffusion">
+<p>Watson, J. L. et al. "De novo design of protein structure and function with RFdiffusion." <em>Nature</em>, 620 (2023).&#160;<a class="footnote-backref" href="#fnref:watson2023rfdiffusion" title="Jump back to footnote 49 in the text">&#8617;</a></p>
+</li>
+<li id="fn:loeffler2024reinvent">
+<p>Loeffler, H. H. et al. "REINVENT 4: Modern AI-driven generative molecule design." <em>J. Cheminformatics</em> (2024).&#160;<a class="footnote-backref" href="#fnref:loeffler2024reinvent" title="Jump back to footnote 50 in the text">&#8617;</a></p>
+</li>
+<li id="fn:merchant2023gnome">
+<p>Merchant, A. et al. "Scaling deep learning for materials discovery." <em>Nature</em>, 624 (2023).&#160;<a class="footnote-backref" href="#fnref:merchant2023gnome" title="Jump back to footnote 51 in the text">&#8617;</a><a class="footnote-backref" href="#fnref2:merchant2023gnome" title="Jump back to footnote 51 in the text">&#8617;</a></p>
+</li>
+<li id="fn:szymanski2023alab">
+<p>Szymanski, N. J. et al. "An autonomous laboratory for the accelerated synthesis of novel materials." <em>Nature</em>, 624 (2023).&#160;<a class="footnote-backref" href="#fnref:szymanski2023alab" title="Jump back to footnote 52 in the text">&#8617;</a><a class="footnote-backref" href="#fnref2:szymanski2023alab" title="Jump back to footnote 52 in the text">&#8617;</a></p>
+</li>
+<li id="fn:fawzi2022alphatensor">
+<p>Fawzi, A. et al. "Discovering faster matrix multiplication algorithms with reinforcement learning." <em>Nature</em>, 610 (2022).&#160;<a class="footnote-backref" href="#fnref:fawzi2022alphatensor" title="Jump back to footnote 53 in the text">&#8617;</a></p>
+</li>
+<li id="fn:romera2023funsearch">
+<p>Romera-Paredes, B. et al. "Mathematical discoveries from program search with large language models." <em>Nature</em>, 625 (2023).&#160;<a class="footnote-backref" href="#fnref:romera2023funsearch" title="Jump back to footnote 54 in the text">&#8617;</a></p>
+</li>
+<li id="fn:mankowitz2023alphadev">
+<p>Mankowitz, D. J. et al. "Faster sorting algorithms discovered using deep reinforcement learning." <em>Nature</em>, 618 (2023).&#160;<a class="footnote-backref" href="#fnref:mankowitz2023alphadev" title="Jump back to footnote 55 in the text">&#8617;</a><a class="footnote-backref" href="#fnref2:mankowitz2023alphadev" title="Jump back to footnote 55 in the text">&#8617;</a></p>
+</li>
+<li id="fn:seo2024diii_d">
+<p>Seo, J. et al. "Avoiding fusion plasma tearing instability with deep reinforcement learning." <em>Nature</em>, 626 (2024).&#160;<a class="footnote-backref" href="#fnref:seo2024diii_d" title="Jump back to footnote 56 in the text">&#8617;</a><a class="footnote-backref" href="#fnref2:seo2024diii_d" title="Jump back to footnote 56 in the text">&#8617;</a></p>
+</li>
+<li id="fn:mirhoseini2021chip">
+<p>Mirhoseini, A. et al. "A graph placement methodology for fast chip design." <em>Nature</em>, 594 (2021); Addendum (2024).&#160;<a class="footnote-backref" href="#fnref:mirhoseini2021chip" title="Jump back to footnote 57 in the text">&#8617;</a></p>
+</li>
+<li id="fn:boiko2023coscientist">
+<p>Boiko, D. A. et al. "Autonomous chemical research with large language models." <em>Nature</em>, 624 (2023).&#160;<a class="footnote-backref" href="#fnref:boiko2023coscientist" title="Jump back to footnote 58 in the text">&#8617;</a></p>
+</li>
+<li id="fn:yamada2025aisci">
+<p>Yamada, Y. et al. "The AI Scientist v2: Workshop-level automated scientific discovery via agentic tree search." <em>arXiv:2504.08066</em> (2025).&#160;<a class="footnote-backref" href="#fnref:yamada2025aisci" title="Jump back to footnote 59 in the text">&#8617;</a><a class="footnote-backref" href="#fnref2:yamada2025aisci" title="Jump back to footnote 59 in the text">&#8617;</a></p>
+</li>
+</ol>
+</div>
+</body>
+</html>

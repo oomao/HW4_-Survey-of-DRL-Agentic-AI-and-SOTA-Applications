@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HW4-B · AI Harness — DRL Research Assistant</title>
+<style>
+  :root {
+    --bg: #0f172a; --panel: #1e293b; --text: #e2e8f0; --muted: #94a3b8;
+    --accent: #0ea5e9; --accent2: #a78bfa; --good: #22c55e; --warn: #f59e0b; --bad: #f43f5e;
+    --border: #334155; --code-bg: #0b1220;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; padding: 2.5rem 1.25rem 4rem;
+    font-family: "Segoe UI", "Microsoft JhengHei", "PingFang TC", system-ui, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.7;
+  }
+  main { max-width: 1060px; margin: 0 auto; }
+  h1 { font-size: 2rem; margin-top: 0; }
+  h2 {
+    margin-top: 2.4rem; font-size: 1.3rem; color: var(--accent);
+    border-left: 4px solid var(--accent); padding-left: 0.7rem;
+  }
+  h3 { margin-top: 1.4rem; font-size: 1.05rem; }
+  p { color: var(--muted); }
+  .panel {
+    background: var(--panel); border-radius: 12px;
+    padding: 1.25rem 1.5rem; margin: 1rem 0;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  }
+  .navbar {
+    background: var(--panel); padding: 0.7em 1em; border-radius: 8px;
+    margin-bottom: 1.5rem; font-size: 0.92em;
+  }
+  .navbar a { margin-right: 1em; text-decoration: none; color: var(--accent); }
+  a { color: var(--accent); }
+  a:hover { color: var(--accent2); }
+  table { border-collapse: collapse; width: 100%; font-size: 0.92rem; margin: 1em 0; }
+  th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); color: var(--text); }
+  code, pre { font-family: "Fira Code", "Consolas", monospace; }
+  code { background: var(--code-bg); padding: 0.12em 0.4em; border-radius: 3px; font-size: 0.92em; color: #facc15; }
+  pre {
+    background: var(--code-bg); padding: 1em 1.2em; border-radius: 8px;
+    overflow-x: auto; font-size: 0.85rem; line-height: 1.45;
+    border-left: 3px solid var(--accent2);
+  }
+  pre code { background: transparent; padding: 0; color: var(--text); }
+  blockquote {
+    border-left: 4px solid var(--accent);
+    padding: 0.6em 1em; margin: 1em 0;
+    background: var(--code-bg); border-radius: 0 8px 8px 0; color: var(--text);
+  }
+  .badge {
+    display: inline-block; padding: 2px 10px; border-radius: 999px;
+    font-size: 0.8em; font-weight: 600;
+  }
+  .badge-accent { background: #082f49; color: #7dd3fc; }
+  .badge-good { background: #14532d; color: #86efac; }
+  .stat {
+    display: inline-block; padding: 0.4em 0.9em; margin: 0.2em 0.4em 0.2em 0;
+    background: var(--code-bg); border-radius: 6px;
+    border: 1px solid var(--border); color: var(--text); font-size: 0.92em;
+  }
+  .stat strong { color: var(--accent); }
+  .footer { color: var(--muted); font-size: 0.85em; text-align: center; margin-top: 4em; }
+  iframe.infogrf {
+    width: 100%; min-height: 1180px; border: 1px solid var(--border);
+    background: white; border-radius: 8px;
+  }
+</style>
+</head>
+<body>
+<main>
+
+<h1>HW4-B · AI Harness <span class="badge badge-accent">DRL Research Assistant</span></h1>
+<p>新 syllabus 的 deliverable：以 LLM 為 controller、4 個 function-callable tools、雙層 memory、4-phase orchestration 的 AI 系統設計。</p>
+
+<nav class="navbar">
+  <a href="#overview">Overview</a>
+  <a href="#architecture">Architecture</a>
+  <a href="#demo">Live Demo Result</a>
+  <a href="#infographic">Infographic</a>
+  <a href="#downloads">Downloads</a>
+</nav>
+
+<section id="overview">
+<h2>一、Why an AI Harness？</h2>
+<div class="panel">
+<p style="color:var(--text)">研究生為新 DRL 主題做文獻綜述時的三個痛點：</p>
+<ol style="color:var(--text)">
+  <li><strong>LLM 知識截止</strong> — 不知道 2025–2026 新 paper。</li>
+  <li><strong>幻覺引用</strong> — LLM 常編造看似真實的 arXiv ID。</li>
+  <li><strong>無 stateful 規劃</strong> — 無法把大查詢拆成多階段並彙整。</li>
+</ol>
+<p style="color:var(--text)">AI Harness 用「<strong>LLM as controller + 外部工具 + memory + orchestration</strong>」解這三點。</p>
+</div>
+</section>
+
+<section id="architecture">
+<h2>二、系統設計（一張圖看完）</h2>
+<div class="panel">
+<h3>2.1 LLM Controller — 四個 sub-role（共享同一 model）</h3>
+<table>
+<thead><tr><th>角色</th><th>輸入</th><th>輸出</th></tr></thead>
+<tbody>
+<tr><td>① Planner</td><td>user query</td><td>2–4 sub-topics + dependency DAG（JSON schema）</td></tr>
+<tr><td>② Reasoner (ReAct)</td><td>sub-topic</td><td>Thought / Action / Observation 循環，單 step 一個 action</td></tr>
+<tr><td>③ Critic</td><td>累積 notes</td><td>binary check + 缺失列表（max 1 re-search round）</td></tr>
+<tr><td>④ Compiler</td><td>notes + citations</td><td>結構化 Markdown 報告（IEEE refs）</td></tr>
+</tbody>
+</table>
+
+<h3>2.2 四個 Tools（≥3 ✓）</h3>
+<table>
+<thead><tr><th>Tool</th><th>Signature</th><th>Side effect</th><th>Failure mode</th></tr></thead>
+<tbody>
+<tr><td><code>arxiv_search</code></td><td>(query, year_min, year_max, max_results) → list[paper]</td><td>None</td><td>無結果 → empty list；網路錯 → offline cache</td></tr>
+<tr><td><code>paper_summarize</code></td><td>(arxiv_id) → {contribution, methods, results, limitations}</td><td>None</td><td>未知 ID → {"error": ...}（不 raise）</td></tr>
+<tr><td><code>citation_format</code></td><td>(paper, style ∈ IEEE/ACM/APA/BibTeX) → str</td><td>None（純函式）</td><td>缺欄位 → &lt;unknown&gt; placeholder</td></tr>
+<tr><td><code>note_save</code></td><td>(topic, content, tags?) → ack</td><td><strong>Write</strong> notes.json</td><td>disk error → {persisted: false}</td></tr>
+</tbody>
+</table>
+
+<h3>2.3 Memory（雙層）</h3>
+<p style="color:var(--text)">Short-term = LLM context window；Long-term = JSON note store（per-topic）+ citation DB（per-paper）。<strong>Compiler 只從 long-term memory 讀 facts，不接受 LLM inline 編造</strong> — 這是幻覺防護的核心。</p>
+</div>
+</section>
+
+<section id="demo">
+<h2>三、Live demo — 實際跑出來的結果</h2>
+<div class="panel">
+<p style="color:var(--text)">執行 <code>python code/harness_demo.py</code>（無需 API key，offline 模式）：</p>
+
+<div>
+  <span class="stat">Query: <strong>"Survey robotics VLA models in 2024-2026"</strong></span>
+</div>
+<div style="margin-top: 0.5em">
+  <span class="stat">Backend: <strong>offline</strong></span>
+  <span class="stat">Sub-topics: <strong>3</strong></span>
+  <span class="stat">Papers found: <strong>9</strong></span>
+  <span class="stat">Unique citations: <strong>4</strong></span>
+  <span class="stat">Tool calls: <strong>25</strong></span>
+  <span class="stat">Wallclock: <strong>0.04s</strong></span>
+  <span class="badge badge-good">END-TO-END SUCCESS</span>
+</div>
+
+<h3>3.1 4-phase trace（節錄）</h3>
+<pre><code>[PLAN][agent]      User query: 'Survey robotics VLA models in 2024-2026'
+[PLAN][agent]      Plan: 3 sub-topics → ['VLA foundation models',
+                                          'Diffusion Policy', 'Humanoid VLA']
+
+[EXECUTE][agent]   --- Sub-topic: VLA foundation models ---
+[EXECUTE][agent]   Thought: I need to gather recent papers on 'VLA foundation models'.
+[EXECUTE][action]  arxiv_search(query='vla foundation', year_min=2024, year_max=2026, max_results=3)
+[EXECUTE][obs]     Returned 3 papers: 2503.14734, 2503.20020, 2502.13130
+[EXECUTE][agent]   Thought: Summarise paper 2503.14734 (GR00T N1...).
+[EXECUTE][action]  paper_summarize(arxiv_id='2503.14734')
+[EXECUTE][obs]     contribution: First open humanoid foundation model with embedded-GPU latency budget.
+[EXECUTE][action]  note_save(topic='VLA foundation models', content=&lt;512 chars&gt;)
+[EXECUTE][obs]     note_count=1 total_chars=512
+... (continues for all 3 papers × 3 sub-topics) ...
+
+[CRITIC][agent]    Coverage check passed for all 3 sub-topics.
+
+[COMPILE][agent]   Report compiled (3247 chars, 25 total tool calls).
+</code></pre>
+
+<h3>3.2 Compiled mini-survey（節錄）</h3>
+<pre><code># A Mini-Survey on Robotics VLA Models In 2024-2026
+
+> AI Harness compiled survey — generated by DRL Research Assistant (offline backend).
+
+## 1. Overview
+This mini-survey was compiled by an AI Harness from 9 papers across
+3 sub-topic(s): VLA foundation models, Diffusion Policy, Humanoid VLA.
+All citations come from a tool-verified arXiv lookup; no LLM-generated
+paper IDs are accepted by the Compiler stage.
+
+## 2. Findings by Sub-topic
+
+### 2.1 VLA foundation models
+- GR00T N1 (arXiv 2025; arxiv:2503.14734)
+  Contribution: First open humanoid foundation model with embedded-GPU latency budget.
+- Gemini Robotics (arXiv 2025; arxiv:2503.20020)
+- Magma (CVPR 2025; arxiv:2502.13130)
+
+### 2.2 Diffusion Policy / 2.3 Humanoid VLA ...
+
+## 4. References
+[1] NVIDIA Research, "GR00T N1: An Open Foundation Model for Generalist
+    Humanoid Robots," arXiv, 2025. arXiv:2503.14734.
+[2] Google DeepMind, "Gemini Robotics: Bringing AI into the Physical World,"
+    arXiv, 2025. arXiv:2503.20020.
+[3] Yang, J. et al. (Microsoft), "Magma: A Foundation Model for Multimodal
+    AI Agents," CVPR, 2025. arXiv:2502.13130.
+[4] Physical Intelligence Team, "Pi-0.5: A Vision-Language-Action Model
+    with Open-World Generalization," arXiv, 2025. arXiv:2504.16054.</code></pre>
+
+<p style="color:var(--text)">完整 transcript：<a href="assets/demo_run.md">demo_run.md</a>；純報告：<a href="assets/compiled_report.md">compiled_report.md</a>。</p>
+</div>
+</section>
+
+<section id="infographic">
+<h2>四、Infographic（必交）</h2>
+<div class="panel">
+<p style="color:var(--text)">下圖嵌入完整 SVG infographic（架構 + pipeline + sequence diagram + tool spec + evaluation + failure modes）。直接看：<a href="../infographic/architecture.html">infographic/architecture.html</a></p>
+<iframe class="infogrf" src="../infographic/architecture.html" title="AI Harness Infographic"></iframe>
+</div>
+</section>
+
+<section id="downloads">
+<h2>五、繳交檔案總覽</h2>
+<div class="panel">
+<table>
+<thead><tr><th>檔案</th><th>對應 syllabus 項目</th></tr></thead>
+<tbody>
+<tr><td><a href="../report/report.md">report/report.md</a> · <a href="../report/report.html">report.html</a></td><td>書面報告（必交）</td></tr>
+<tr><td><a href="../infographic/architecture.html">infographic/architecture.html</a></td><td>Infographic（必交）</td></tr>
+<tr><td><a href="../log.md">log.md</a></td><td>設計過程紀錄（必交）</td></tr>
+<tr><td><a href="../code/tools.py">code/tools.py</a></td><td>4 個工具 + 15 篇 paper corpus</td></tr>
+<tr><td><a href="../code/harness_demo.py">code/harness_demo.py</a></td><td>4-phase orchestrator</td></tr>
+<tr><td><a href="assets/demo_run.md">assets/demo_run.md</a></td><td>實際 demo trace</td></tr>
+<tr><td><a href="assets/compiled_report.md">assets/compiled_report.md</a></td><td>AI Harness 產出的 mini-survey</td></tr>
+</tbody>
+</table>
+
+<h3>快速重現</h3>
+<pre><code># 1. anthropic 為 optional（無 API key 也跑得起來）
+pip install -r code/requirements.txt
+
+# 2. 跑預設 query（offline 模式）
+python code/harness_demo.py
+
+# 3. 自訂 query
+python code/harness_demo.py "Survey foundation agents 2024-2026"
+
+# 4. 切到真實 Claude backend
+$env:ANTHROPIC_API_KEY = "sk-ant-..."
+python code/harness_demo.py</code></pre>
+</div>
+</section>
+
+<p class="footer">© 2026 csm088220 · HW4 Version B (AI Harness) · 與 <a href="../../A_DRL_Survey/docs/index.html">Version A (DRL Survey)</a> 互為鏡像</p>
+
+</main>
+</body>
+</html>

@@ -1,0 +1,11 @@
+# HW4 Bonus MVP dependencies
+# Tested on Python 3.11.9, Windows 11
+
+# Bonus B — PPO demo on CartPole
+stable-baselines3[extra]>=2.8.0
+gymnasium>=1.0.0
+matplotlib>=3.8.0
+numpy>=1.26.0
+
+# Bonus C — Tool-using LLM agent (offline-by-default, optional Claude API)
+anthropic>=0.50.0    # Used only when ANTHROPIC_API_KEY is set; otherwise offline planner runs.

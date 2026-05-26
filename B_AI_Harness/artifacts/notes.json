@@ -1,0 +1,91 @@
+{
+  "_meta": {
+    "created": 1779792320.6949346
+  },
+  "topics": {
+    "VLA foundation models": {
+      "notes": [
+        {
+          "ts": 1779792320.6949346,
+          "content": "**GR00T N1: An Open Foundation Model for Generalist Humanoid Robots** (arXiv 2025; arxiv:2503.14734)\n- Contribution: First open humanoid foundation model with embedded-GPU latency budget.\n- Methods: Dual-system: VLM at 5-10 Hz + visuomotor diffusion-transformer at 100+ Hz.\n- Results: GR00T-N1-2B samples 16 actions in 63.9 ms on an L40 GPU.\n- Limitations: Narrow real-world dexterity benchmarks; sim2real still needs domain-randomization tuning.",
+          "tags": [
+            "VLA foundation models"
+          ]
+        },
+        {
+          "ts": 1779792320.7009587,
+          "content": "**Gemini Robotics: Bringing AI into the Physical World** (arXiv 2025; arxiv:2503.20020)\n- Contribution: Closed-source generalist VLA powering Apptronik Apollo and other commercial humanoids.\n- Methods: Gemini 2.0 backbone; Gemini Robotics-ER variant adds embodied reasoning + agentic tool use.\n- Results: Smooth real-world manipulation; on-device variant deployable.\n- Limitations: Closed weights; cloud dependency; multimodal reasoning latency vs reactive control trade-off.",
+          "tags": [
+            "VLA foundation models"
+          ]
+        },
+        {
+          "ts": 1779792320.706968,
+          "content": "**Magma: A Foundation Model for Multimodal AI Agents** (CVPR 2025; arxiv:2502.13130)\n- Contribution: Single foundation model for both digital + physical action.\n- Methods: Set-of-Mark (SoM) for action grounding; Trace-of-Mark (ToM) for planning.\n- Results: SOTA on UI navigation + robot manipulation benchmarks.\n- Limitations: Zero-shot real-robot dexterous performance lags specialist VLAs.",
+          "tags": [
+            "VLA foundation models"
+          ]
+        }
+      ],
+      "tags": [
+        "VLA foundation models"
+      ]
+    },
+    "Diffusion Policy": {
+      "notes": [
+        {
+          "ts": 1779792320.7119732,
+          "content": "**GR00T N1: An Open Foundation Model for Generalist Humanoid Robots** (arXiv 2025; arxiv:2503.14734)\n- Contribution: First open humanoid foundation model with embedded-GPU latency budget.\n- Methods: Dual-system: VLM at 5-10 Hz + visuomotor diffusion-transformer at 100+ Hz.\n- Results: GR00T-N1-2B samples 16 actions in 63.9 ms on an L40 GPU.\n- Limitations: Narrow real-world dexterity benchmarks; sim2real still needs domain-randomization tuning.",
+          "tags": [
+            "Diffusion Policy"
+          ]
+        },
+        {
+          "ts": 1779792320.7169876,
+          "content": "**Pi-0.5: A Vision-Language-Action Model with Open-World Generalization** (arXiv 2025; arxiv:2504.16054)\n- Contribution: First VLA shown to clean entirely unseen real-world kitchens and bedrooms across repeated trials.\n- Methods: Builds on Pi-0 flow-matching action expert; adds hierarchical sub-goal reasoning at the VLM layer.\n- Results: 60-80% task-completion success in novel residential environments.\n- Limitations: Long-horizon failures remain dominant; teleop data still expensive; not yet a deployable household product.",
+          "tags": [
+            "Diffusion Policy"
+          ]
+        },
+        {
+          "ts": 1779792320.723499,
+          "content": "**Gemini Robotics: Bringing AI into the Physical World** (arXiv 2025; arxiv:2503.20020)\n- Contribution: Closed-source generalist VLA powering Apptronik Apollo and other commercial humanoids.\n- Methods: Gemini 2.0 backbone; Gemini Robotics-ER variant adds embodied reasoning + agentic tool use.\n- Results: Smooth real-world manipulation; on-device variant deployable.\n- Limitations: Closed weights; cloud dependency; multimodal reasoning latency vs reactive control trade-off.",
+          "tags": [
+            "Diffusion Policy"
+          ]
+        }
+      ],
+      "tags": [
+        "Diffusion Policy"
+      ]
+    },
+    "Humanoid VLA": {
+      "notes": [
+        {
+          "ts": 1779792320.729013,
+          "content": "**Pi-0.5: A Vision-Language-Action Model with Open-World Generalization** (arXiv 2025; arxiv:2504.16054)\n- Contribution: First VLA shown to clean entirely unseen real-world kitchens and bedrooms across repeated trials.\n- Methods: Builds on Pi-0 flow-matching action expert; adds hierarchical sub-goal reasoning at the VLM layer.\n- Results: 60-80% task-completion success in novel residential environments.\n- Limitations: Long-horizon failures remain dominant; teleop data still expensive; not yet a deployable household product.",
+          "tags": [
+            "Humanoid VLA"
+          ]
+        },
+        {
+          "ts": 1779792320.7360349,
+          "content": "**GR00T N1: An Open Foundation Model for Generalist Humanoid Robots** (arXiv 2025; arxiv:2503.14734)\n- Contribution: First open humanoid foundation model with embedded-GPU latency budget.\n- Methods: Dual-system: VLM at 5-10 Hz + visuomotor diffusion-transformer at 100+ Hz.\n- Results: GR00T-N1-2B samples 16 actions in 63.9 ms on an L40 GPU.\n- Limitations: Narrow real-world dexterity benchmarks; sim2real still needs domain-randomization tuning.",
+          "tags": [
+            "Humanoid VLA"
+          ]
+        },
+        {
+          "ts": 1779792320.7415476,
+          "content": "**Gemini Robotics: Bringing AI into the Physical World** (arXiv 2025; arxiv:2503.20020)\n- Contribution: Closed-source generalist VLA powering Apptronik Apollo and other commercial humanoids.\n- Methods: Gemini 2.0 backbone; Gemini Robotics-ER variant adds embodied reasoning + agentic tool use.\n- Results: Smooth real-world manipulation; on-device variant deployable.\n- Limitations: Closed weights; cloud dependency; multimodal reasoning latency vs reactive control trade-off.",
+          "tags": [
+            "Humanoid VLA"
+          ]
+        }
+      ],
+      "tags": [
+        "Humanoid VLA"
+      ]
+    }
+  }
+}

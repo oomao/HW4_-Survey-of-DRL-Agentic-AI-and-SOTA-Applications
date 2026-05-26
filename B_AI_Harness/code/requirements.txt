@@ -1,0 +1,9 @@
+# HW4 Version B (AI Harness) — dependencies
+# Tested on Python 3.11.9, Windows 11
+
+# Only required if you want to switch to the live Claude backend.
+# Without ANTHROPIC_API_KEY the harness runs entirely offline.
+anthropic>=0.50.0
+
+# No other 3rd-party deps for the core harness — uses stdlib only
+# (json, ast, re, pathlib, dataclasses, typing).

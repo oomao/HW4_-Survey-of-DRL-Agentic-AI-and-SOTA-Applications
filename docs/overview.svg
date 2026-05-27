@@ -1,0 +1,280 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1780" font-family="'Segoe UI','Microsoft JhengHei','PingFang TC',system-ui,sans-serif">
+  <!-- ============ background ============ -->
+  <rect width="1400" height="1780" fill="#f1f5f9"/>
+
+  <!-- ============ HEADER ============ -->
+  <rect x="40" y="30" width="1320" height="90" rx="14" fill="#1e3a8a"/>
+  <text x="80" y="80" font-size="34" font-weight="700" fill="#ffffff">HW4 — DRL Survey × AI Harness</text>
+  <text x="80" y="108" font-size="16" fill="#bfdbfe">From the survey-writing pain to an AI-driven solution — two mirrored deliverables</text>
+  <rect x="1190" y="55" width="150" height="40" rx="20" fill="#fbbf24"/>
+  <text x="1265" y="81" font-size="15" font-weight="700" fill="#1e3a8a" text-anchor="middle">Two-Version</text>
+
+  <!-- ============ SECTION 1 — PROBLEM ============ -->
+  <g transform="translate(40, 150)">
+    <rect width="1320" height="260" rx="14" fill="#ffffff" stroke="#fecaca" stroke-width="2"/>
+    <rect width="8" height="260" rx="4" fill="#ef4444"/>
+    <text x="32" y="40" font-size="22" font-weight="700" fill="#b91c1c">① Problem  ·  寫一份 DRL Survey 為什麼這麼痛？</text>
+    <text x="32" y="66" font-size="13" fill="#64748b">三個 pain point — 讓研究生在 2025 年寫文獻綜述既慢又容易漏 SOTA</text>
+
+    <!-- Pain card 1 -->
+    <g transform="translate(40, 90)">
+      <rect width="395" height="150" rx="10" fill="#fef2f2" stroke="#fca5a5"/>
+      <circle cx="40" cy="40" r="22" fill="#ef4444"/>
+      <text x="40" y="46" font-size="22" font-weight="700" fill="#ffffff" text-anchor="middle">!</text>
+      <text x="76" y="36" font-size="16" font-weight="700" fill="#991b1b">資訊爆量</text>
+      <text x="76" y="58" font-size="13" fill="#7f1d1d">arXiv 每天上百篇 paper；</text>
+      <text x="76" y="76" font-size="13" fill="#7f1d1d">人工難以判斷哪幾篇是 SOTA。</text>
+      <text x="20" y="120" font-size="12" fill="#6b7280">→ 漏掉 2024-26 五條重要主軸</text>
+      <text x="20" y="138" font-size="12" fill="#6b7280">　 的風險極高</text>
+    </g>
+    <!-- Pain card 2 -->
+    <g transform="translate(450, 90)">
+      <rect width="395" height="150" rx="10" fill="#fef2f2" stroke="#fca5a5"/>
+      <circle cx="40" cy="40" r="22" fill="#ef4444"/>
+      <text x="40" y="46" font-size="22" font-weight="700" fill="#ffffff" text-anchor="middle">?</text>
+      <text x="76" y="36" font-size="16" font-weight="700" fill="#991b1b">LLM 幻覺 + 知識截止</text>
+      <text x="76" y="58" font-size="13" fill="#7f1d1d">直接問 ChatGPT 會編造</text>
+      <text x="76" y="76" font-size="13" fill="#7f1d1d">看似真實但不存在的 arXiv ID。</text>
+      <text x="20" y="120" font-size="12" fill="#6b7280">→ 引用無法驗證、不知 2025</text>
+      <text x="20" y="138" font-size="12" fill="#6b7280">　 之後新發表的 paper</text>
+    </g>
+    <!-- Pain card 3 -->
+    <g transform="translate(860, 90)">
+      <rect width="420" height="150" rx="10" fill="#fef2f2" stroke="#fca5a5"/>
+      <circle cx="40" cy="40" r="22" fill="#ef4444"/>
+      <text x="40" y="46" font-size="22" font-weight="700" fill="#ffffff" text-anchor="middle">×</text>
+      <text x="76" y="36" font-size="16" font-weight="700" fill="#991b1b">手動 synthesis 太慢</text>
+      <text x="76" y="58" font-size="13" fill="#7f1d1d">引用格式手動轉、跨 paper 比較</text>
+      <text x="76" y="76" font-size="13" fill="#7f1d1d">全靠自己抄筆記。</text>
+      <text x="20" y="120" font-size="12" fill="#6b7280">→ 把所有時間都花在排版而非</text>
+      <text x="20" y="138" font-size="12" fill="#6b7280">　 真正讀懂內容</text>
+    </g>
+  </g>
+
+  <!-- ============ SECTION 2 — PIPELINE ============ -->
+  <g transform="translate(40, 440)">
+    <rect width="1320" height="220" rx="14" fill="#ffffff" stroke="#bfdbfe" stroke-width="2"/>
+    <rect width="8" height="220" rx="4" fill="#2563eb"/>
+    <text x="32" y="40" font-size="22" font-weight="700" fill="#1e3a8a">② Pipeline  ·  把「寫一份 Survey」拆成 6 個可重複的 stage</text>
+    <text x="32" y="66" font-size="13" fill="#64748b">這是兩個版本共同的骨幹 — A 版手動走完一次，B 版設計成自動化系統</text>
+
+    <!-- 6 pipeline stages -->
+    <g transform="translate(40, 100)" font-size="13">
+      <!-- Stage 1 -->
+      <rect x="0" y="0" width="180" height="85" rx="10" fill="#eff6ff" stroke="#60a5fa"/>
+      <text x="90" y="28" font-size="14" font-weight="700" fill="#1e40af" text-anchor="middle">① Plan</text>
+      <text x="90" y="52" fill="#1e3a8a" text-anchor="middle">拆 query 為</text>
+      <text x="90" y="70" fill="#1e3a8a" text-anchor="middle">N 個 sub-topic</text>
+      <!-- arrow -->
+      <path d="M 184 42 L 198 42" stroke="#2563eb" stroke-width="2.5"/>
+      <polygon points="198,38 208,42 198,46" fill="#2563eb"/>
+
+      <!-- Stage 2 -->
+      <rect x="212" y="0" width="180" height="85" rx="10" fill="#eff6ff" stroke="#60a5fa"/>
+      <text x="302" y="28" font-size="14" font-weight="700" fill="#1e40af" text-anchor="middle">② Search</text>
+      <text x="302" y="52" fill="#1e3a8a" text-anchor="middle">arXiv 查詢</text>
+      <text x="302" y="70" fill="#1e3a8a" text-anchor="middle">+ 年份過濾</text>
+      <path d="M 396 42 L 410 42" stroke="#2563eb" stroke-width="2.5"/>
+      <polygon points="410,38 420,42 410,46" fill="#2563eb"/>
+
+      <!-- Stage 3 -->
+      <rect x="424" y="0" width="180" height="85" rx="10" fill="#eff6ff" stroke="#60a5fa"/>
+      <text x="514" y="28" font-size="14" font-weight="700" fill="#1e40af" text-anchor="middle">③ Read</text>
+      <text x="514" y="52" fill="#1e3a8a" text-anchor="middle">逐篇 summarize</text>
+      <text x="514" y="70" fill="#1e3a8a" text-anchor="middle">抓 contribution</text>
+      <path d="M 608 42 L 622 42" stroke="#2563eb" stroke-width="2.5"/>
+      <polygon points="622,38 632,42 622,46" fill="#2563eb"/>
+
+      <!-- Stage 4 -->
+      <rect x="636" y="0" width="180" height="85" rx="10" fill="#eff6ff" stroke="#60a5fa"/>
+      <text x="726" y="28" font-size="14" font-weight="700" fill="#1e40af" text-anchor="middle">④ Critic</text>
+      <text x="726" y="52" fill="#1e3a8a" text-anchor="middle">驗證 coverage</text>
+      <text x="726" y="70" fill="#1e3a8a" text-anchor="middle">補洞 (≤1 round)</text>
+      <path d="M 820 42 L 834 42" stroke="#2563eb" stroke-width="2.5"/>
+      <polygon points="834,38 844,42 834,46" fill="#2563eb"/>
+
+      <!-- Stage 5 -->
+      <rect x="848" y="0" width="180" height="85" rx="10" fill="#eff6ff" stroke="#60a5fa"/>
+      <text x="938" y="28" font-size="14" font-weight="700" fill="#1e40af" text-anchor="middle">⑤ Compile</text>
+      <text x="938" y="52" fill="#1e3a8a" text-anchor="middle">合成 sections</text>
+      <text x="938" y="70" fill="#1e3a8a" text-anchor="middle">+ 引用</text>
+      <path d="M 1032 42 L 1046 42" stroke="#2563eb" stroke-width="2.5"/>
+      <polygon points="1046,38 1056,42 1046,46" fill="#2563eb"/>
+
+      <!-- Stage 6 -->
+      <rect x="1060" y="0" width="180" height="85" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+      <text x="1150" y="28" font-size="14" font-weight="700" fill="#1e40af" text-anchor="middle">⑥ Output</text>
+      <text x="1150" y="52" fill="#1e3a8a" text-anchor="middle">Structured</text>
+      <text x="1150" y="70" fill="#1e3a8a" text-anchor="middle">report + refs</text>
+    </g>
+  </g>
+
+  <!-- ============ SECTION 3 — MODULES (two versions) ============ -->
+  <g transform="translate(40, 690)">
+    <rect width="1320" height="500" rx="14" fill="#ffffff" stroke="#fde68a" stroke-width="2"/>
+    <rect width="8" height="500" rx="4" fill="#f59e0b"/>
+    <text x="32" y="40" font-size="22" font-weight="700" fill="#92400e">③ Solution Modules  ·  同一個 pipeline，兩種交付方式</text>
+    <text x="32" y="66" font-size="13" fill="#64748b">A 版親自走完 → 產出 survey 成品；B 版設計能跑這個 pipeline 的 AI Harness → 產出系統</text>
+
+    <!-- VERSION A panel -->
+    <g transform="translate(30, 90)">
+      <rect width="615" height="395" rx="12" fill="#f0fdf4" stroke="#86efac" stroke-width="2"/>
+      <rect width="615" height="50" rx="12" fill="#16a34a"/>
+      <rect y="38" width="615" height="12" fill="#16a34a"/>
+      <text x="24" y="32" font-size="18" font-weight="700" fill="#ffffff">A · DRL Survey  —  Human-run pipeline</text>
+      <text x="590" y="32" font-size="14" fill="#dcfce7" text-anchor="end">原 syllabus</text>
+
+      <!-- A modules grid -->
+      <g transform="translate(20, 70)" font-size="13">
+        <rect width="280" height="90" rx="8" fill="#ffffff" stroke="#bbf7d0"/>
+        <text x="14" y="24" font-weight="700" fill="#166534">📚  Part 1-7 文獻綜述</text>
+        <text x="14" y="46" fill="#374151">DRL 基礎 → 系統平台 → Agentic AI</text>
+        <text x="14" y="64" fill="#374151">→ Robotics/Game/Science → 2024-26</text>
+        <text x="14" y="80" fill="#6b7280">100+ 引用 · 11,575 字</text>
+
+        <rect x="295" width="280" height="90" rx="8" fill="#ffffff" stroke="#bbf7d0"/>
+        <text x="309" y="24" font-weight="700" fill="#166534">📊  Part 6 Comparative</text>
+        <text x="309" y="46" fill="#374151">演算法演化譜系 + 系統平台比較表</text>
+        <text x="309" y="64" fill="#374151">+ 三大應用領域橫向比較</text>
+        <text x="309" y="80" fill="#6b7280">回應 Comparative Discussion 15%</text>
+
+        <rect y="105" width="280" height="90" rx="8" fill="#ffffff" stroke="#bbf7d0"/>
+        <text x="14" y="129" font-weight="700" fill="#166534">🎯  Bonus B · PPO MVP</text>
+        <text x="14" y="151" fill="#374151">stable-baselines3 訓 CartPole-v1</text>
+        <text x="14" y="169" fill="#374151">→ reward 500/500，附 reward 曲線</text>
+        <text x="14" y="185" fill="#6b7280">code/ppo_demo.py</text>
+
+        <rect x="295" y="105" width="280" height="90" rx="8" fill="#ffffff" stroke="#bbf7d0"/>
+        <text x="309" y="129" font-weight="700" fill="#166534">🤖  Bonus C · ReAct Agent</text>
+        <text x="309" y="151" fill="#374151">2-tool LLM agent（Claude API 可選）</text>
+        <text x="309" y="169" fill="#374151">offline 模式無 API key 也能跑</text>
+        <text x="309" y="185" fill="#6b7280">code/llm_agent_demo.py</text>
+
+        <rect y="210" width="575" height="78" rx="8" fill="#ffffff" stroke="#bbf7d0"/>
+        <text x="14" y="234" font-weight="700" fill="#166534">📑  交付物</text>
+        <text x="14" y="256" fill="#374151">HW4_DRL_Survey.html (IEEE 排版) · slides.md (15 張) · artifacts/ (model + 曲線 + transcript)</text>
+        <text x="14" y="274" fill="#6b7280">入口 → A_DRL_Survey/README.md</text>
+      </g>
+    </g>
+
+    <!-- VERSION B panel -->
+    <g transform="translate(675, 90)">
+      <rect width="615" height="395" rx="12" fill="#fff7ed" stroke="#fdba74" stroke-width="2"/>
+      <rect width="615" height="50" rx="12" fill="#ea580c"/>
+      <rect y="38" width="615" height="12" fill="#ea580c"/>
+      <text x="24" y="32" font-size="18" font-weight="700" fill="#ffffff">B · AI Harness  —  System that runs the pipeline</text>
+      <text x="590" y="32" font-size="14" fill="#ffedd5" text-anchor="end">新 syllabus</text>
+
+      <g transform="translate(20, 70)" font-size="13">
+        <rect width="280" height="90" rx="8" fill="#ffffff" stroke="#fed7aa"/>
+        <text x="14" y="24" font-weight="700" fill="#9a3412">🧠  LLM Controller</text>
+        <text x="14" y="46" fill="#374151">Planner → Reasoner → Critic → Compiler</text>
+        <text x="14" y="64" fill="#374151">ReAct loop with strict JSON tool calls</text>
+        <text x="14" y="80" fill="#6b7280">code/harness_demo.py</text>
+
+        <rect x="295" width="280" height="90" rx="8" fill="#ffffff" stroke="#fed7aa"/>
+        <text x="309" y="24" font-weight="700" fill="#9a3412">🛠  4 Tools</text>
+        <text x="309" y="46" fill="#374151">arxiv_search · paper_summarize</text>
+        <text x="309" y="64" fill="#374151">citation_format · note_save</text>
+        <text x="309" y="80" fill="#6b7280">code/tools.py（strict schema）</text>
+
+        <rect y="105" width="280" height="90" rx="8" fill="#ffffff" stroke="#fed7aa"/>
+        <text x="14" y="129" font-weight="700" fill="#9a3412">💾  Dual Memory</text>
+        <text x="14" y="151" fill="#374151">short-term：對話歷史 + tool trace</text>
+        <text x="14" y="169" fill="#374151">long-term：notes.json (跨 session)</text>
+        <text x="14" y="185" fill="#6b7280">artifacts/notes.json</text>
+
+        <rect x="295" y="105" width="280" height="90" rx="8" fill="#ffffff" stroke="#fed7aa"/>
+        <text x="309" y="129" font-weight="700" fill="#9a3412">📐  Evaluation</text>
+        <text x="309" y="151" fill="#374151">Coverage F1 · citation acc · latency</text>
+        <text x="309" y="169" fill="#374151">cost · 5-pt Likert · ablation 4 組</text>
+        <text x="309" y="185" fill="#6b7280">report.md §5</text>
+
+        <rect y="210" width="575" height="78" rx="8" fill="#ffffff" stroke="#fed7aa"/>
+        <text x="14" y="234" font-weight="700" fill="#9a3412">📑  交付物</text>
+        <text x="14" y="256" fill="#374151">report.html (≤5 頁) · infographic/architecture.html · log.md · working MVP（offline）</text>
+        <text x="14" y="274" fill="#6b7280">入口 → B_AI_Harness/README.md</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- ============ SECTION 4 — OUTCOMES ============ -->
+  <g transform="translate(40, 1220)">
+    <rect width="1320" height="440" rx="14" fill="#ffffff" stroke="#c4b5fd" stroke-width="2"/>
+    <rect width="8" height="440" rx="4" fill="#7c3aed"/>
+    <text x="32" y="40" font-size="22" font-weight="700" fill="#5b21b6">④ Expected Outcomes  ·  可實際拿出來檢驗的成品</text>
+    <text x="32" y="66" font-size="13" fill="#64748b">每一項都附 file path — 不是承諾，是已交付的檔案</text>
+
+    <!-- outcome rows -->
+    <g transform="translate(30, 95)" font-size="13">
+      <!-- A outcomes -->
+      <rect width="615" height="320" rx="10" fill="#faf5ff" stroke="#ddd6fe"/>
+      <text x="20" y="28" font-size="15" font-weight="700" fill="#6b21a8">Version A — DRL Survey</text>
+
+      <g transform="translate(20, 50)">
+        <rect width="575" height="38" rx="6" fill="#ffffff" stroke="#e9d5ff"/>
+        <text x="14" y="24" font-weight="700" fill="#581c87">📘  完整書面報告</text>
+        <text x="220" y="24" fill="#374151">11,575 字 / 100+ refs / IEEE 排版 HTML</text>
+
+        <rect y="48" width="575" height="38" rx="6" fill="#ffffff" stroke="#e9d5ff"/>
+        <text x="14" y="72" font-weight="700" fill="#581c87">🎞  Presentation</text>
+        <text x="220" y="72" fill="#374151">15 張 slides.md（Marp / Slidev compatible）</text>
+
+        <rect y="96" width="575" height="38" rx="6" fill="#ffffff" stroke="#e9d5ff"/>
+        <text x="14" y="120" font-weight="700" fill="#581c87">🤖  PPO MVP</text>
+        <text x="220" y="120" fill="#374151">CartPole reward 500/500 + 訓練曲線 PNG</text>
+
+        <rect y="144" width="575" height="38" rx="6" fill="#ffffff" stroke="#e9d5ff"/>
+        <text x="14" y="168" font-weight="700" fill="#581c87">🧠  LLM Agent</text>
+        <text x="220" y="168" fill="#374151">ReAct demo + transcript（離線可重現）</text>
+
+        <rect y="192" width="575" height="38" rx="6" fill="#ffffff" stroke="#e9d5ff"/>
+        <text x="14" y="216" font-weight="700" fill="#581c87">🌐  Live demo</text>
+        <text x="220" y="216" fill="#374151">A_DRL_Survey/docs/index.html（GitHub Pages 可發佈）</text>
+
+        <rect y="240" width="575" height="38" rx="6" fill="#ffffff" stroke="#e9d5ff"/>
+        <text x="14" y="264" font-weight="700" fill="#581c87">🗂  References</text>
+        <text x="220" y="264" fill="#374151">10_references.md — 100+ 條 BibTeX-ready</text>
+      </g>
+
+      <!-- B outcomes -->
+      <g transform="translate(645, 0)">
+        <rect width="615" height="320" rx="10" fill="#faf5ff" stroke="#ddd6fe"/>
+        <text x="20" y="28" font-size="15" font-weight="700" fill="#6b21a8">Version B — AI Harness</text>
+
+        <g transform="translate(20, 50)">
+          <rect width="575" height="38" rx="6" fill="#ffffff" stroke="#e9d5ff"/>
+          <text x="14" y="24" font-weight="700" fill="#581c87">📕  System design report</text>
+          <text x="220" y="24" fill="#374151">≤5 頁書面（HTML / md） · 含 sequence diagram</text>
+
+          <rect y="48" width="575" height="38" rx="6" fill="#ffffff" stroke="#e9d5ff"/>
+          <text x="14" y="72" font-weight="700" fill="#581c87">🖼  Architecture infographic</text>
+          <text x="220" y="72" fill="#374151">6-panel SVG（user / controller / tool / memory ...）</text>
+
+          <rect y="96" width="575" height="38" rx="6" fill="#ffffff" stroke="#e9d5ff"/>
+          <text x="14" y="120" font-weight="700" fill="#581c87">⚙  Working MVP</text>
+          <text x="220" y="120" fill="#374151">9 papers / 25 tool calls / 0.04s（offline）</text>
+
+          <rect y="144" width="575" height="38" rx="6" fill="#ffffff" stroke="#e9d5ff"/>
+          <text x="14" y="168" font-weight="700" fill="#581c87">📜  log.md</text>
+          <text x="220" y="168" fill="#374151">11 次設計 iteration + 11 條 decision table</text>
+
+          <rect y="192" width="575" height="38" rx="6" fill="#ffffff" stroke="#e9d5ff"/>
+          <text x="14" y="216" font-weight="700" fill="#581c87">📊  Evaluation plan</text>
+          <text x="220" y="216" fill="#374151">5 量化 + 5 質化 + 4 組 ablation 規格</text>
+
+          <rect y="240" width="575" height="38" rx="6" fill="#ffffff" stroke="#e9d5ff"/>
+          <text x="14" y="264" font-weight="700" fill="#581c87">💾  Persisted notes</text>
+          <text x="220" y="264" fill="#374151">artifacts/notes.json（long-term memory 樣本）</text>
+        </g>
+      </g>
+    </g>
+  </g>
+
+  <!-- ============ FOOTER ============ -->
+  <g transform="translate(40, 1690)">
+    <rect width="1320" height="60" rx="10" fill="#0f172a"/>
+    <text x="30" y="38" font-size="14" fill="#cbd5e1">A 與 B 互為鏡像：A 是 pipeline 的「output」，B 是能跑這個 pipeline 的「system」。</text>
+    <text x="1290" y="38" font-size="13" font-weight="600" fill="#fbbf24" text-anchor="end">→ A_DRL_Survey/  ·  B_AI_Harness/</text>
+  </g>
+</svg>

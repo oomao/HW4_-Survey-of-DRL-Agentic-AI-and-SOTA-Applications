@@ -1,90 +1,141 @@
 {
   "_meta": {
-    "created": 1779792320.6949346
+    "created": 1780042424.4466794
   },
   "topics": {
     "VLA foundation models": {
       "notes": [
         {
-          "ts": 1779792320.6949346,
-          "content": "**GR00T N1: An Open Foundation Model for Generalist Humanoid Robots** (arXiv 2025; arxiv:2503.14734)\n- Contribution: First open humanoid foundation model with embedded-GPU latency budget.\n- Methods: Dual-system: VLM at 5-10 Hz + visuomotor diffusion-transformer at 100+ Hz.\n- Results: GR00T-N1-2B samples 16 actions in 63.9 ms on an L40 GPU.\n- Limitations: Narrow real-world dexterity benchmarks; sim2real still needs domain-randomization tuning.",
-          "tags": [
-            "VLA foundation models"
-          ]
-        },
-        {
-          "ts": 1779792320.7009587,
-          "content": "**Gemini Robotics: Bringing AI into the Physical World** (arXiv 2025; arxiv:2503.20020)\n- Contribution: Closed-source generalist VLA powering Apptronik Apollo and other commercial humanoids.\n- Methods: Gemini 2.0 backbone; Gemini Robotics-ER variant adds embodied reasoning + agentic tool use.\n- Results: Smooth real-world manipulation; on-device variant deployable.\n- Limitations: Closed weights; cloud dependency; multimodal reasoning latency vs reactive control trade-off.",
-          "tags": [
-            "VLA foundation models"
-          ]
-        },
-        {
-          "ts": 1779792320.706968,
+          "ts": 1780042424.4466794,
           "content": "**Magma: A Foundation Model for Multimodal AI Agents** (CVPR 2025; arxiv:2502.13130)\n- Contribution: Single foundation model for both digital + physical action.\n- Methods: Set-of-Mark (SoM) for action grounding; Trace-of-Mark (ToM) for planning.\n- Results: SOTA on UI navigation + robot manipulation benchmarks.\n- Limitations: Zero-shot real-robot dexterous performance lags specialist VLAs.",
           "tags": [
             "VLA foundation models"
-          ]
+          ],
+          "meta": {
+            "arxiv_id": "2502.13130",
+            "title": "Magma: A Foundation Model for Multimodal AI Agents",
+            "authors": "Yang, J. et al. (Microsoft)",
+            "year": 2025,
+            "venue": "CVPR",
+            "key_contribution": "Single foundation model for both digital + physical action.",
+            "methods": "Set-of-Mark (SoM) for action grounding; Trace-of-Mark (ToM) for planning.",
+            "results": "SOTA on UI navigation + robot manipulation benchmarks.",
+            "limitations": "Zero-shot real-robot dexterous performance lags specialist VLAs.",
+            "sub_topic": "VLA foundation models"
+          }
+        },
+        {
+          "ts": 1780042424.451492,
+          "content": "**OpenVLA: An Open-Source Vision-Language-Action Model** (arXiv 2024; arxiv:2406.09246)\n- Contribution: First open-weights VLA matching or beating proprietary RT-2 baselines.\n- Methods: Fine-tunes Llama 2 + SigLIP/DINOv2 visual encoder on tokenized 7-DoF action sequences.\n- Results: +20.4% over Diffusion Policy across multi-task multi-object generalization; LoRA-tuneable on consumer GPUs.\n- Limitations: 5 Hz inference is too slow for dexterous control; discrete action tokens limit precision; single-image observation hurts depth tasks.",
+          "tags": [
+            "VLA foundation models"
+          ],
+          "meta": {
+            "arxiv_id": "2406.09246",
+            "title": "OpenVLA: An Open-Source Vision-Language-Action Model",
+            "authors": "Kim, M. J. et al.",
+            "year": 2024,
+            "venue": "arXiv",
+            "key_contribution": "First open-weights VLA matching or beating proprietary RT-2 baselines.",
+            "methods": "Fine-tunes Llama 2 + SigLIP/DINOv2 visual encoder on tokenized 7-DoF action sequences.",
+            "results": "+20.4% over Diffusion Policy across multi-task multi-object generalization; LoRA-tuneable on consumer GPUs.",
+            "limitations": "5 Hz inference is too slow for dexterous control; discrete action tokens limit precision; single-image observation hurts depth tasks.",
+            "sub_topic": "VLA foundation models"
+          }
         }
       ],
       "tags": [
         "VLA foundation models"
       ]
     },
-    "Diffusion Policy": {
-      "notes": [
-        {
-          "ts": 1779792320.7119732,
-          "content": "**GR00T N1: An Open Foundation Model for Generalist Humanoid Robots** (arXiv 2025; arxiv:2503.14734)\n- Contribution: First open humanoid foundation model with embedded-GPU latency budget.\n- Methods: Dual-system: VLM at 5-10 Hz + visuomotor diffusion-transformer at 100+ Hz.\n- Results: GR00T-N1-2B samples 16 actions in 63.9 ms on an L40 GPU.\n- Limitations: Narrow real-world dexterity benchmarks; sim2real still needs domain-randomization tuning.",
-          "tags": [
-            "Diffusion Policy"
-          ]
-        },
-        {
-          "ts": 1779792320.7169876,
-          "content": "**Pi-0.5: A Vision-Language-Action Model with Open-World Generalization** (arXiv 2025; arxiv:2504.16054)\n- Contribution: First VLA shown to clean entirely unseen real-world kitchens and bedrooms across repeated trials.\n- Methods: Builds on Pi-0 flow-matching action expert; adds hierarchical sub-goal reasoning at the VLM layer.\n- Results: 60-80% task-completion success in novel residential environments.\n- Limitations: Long-horizon failures remain dominant; teleop data still expensive; not yet a deployable household product.",
-          "tags": [
-            "Diffusion Policy"
-          ]
-        },
-        {
-          "ts": 1779792320.723499,
-          "content": "**Gemini Robotics: Bringing AI into the Physical World** (arXiv 2025; arxiv:2503.20020)\n- Contribution: Closed-source generalist VLA powering Apptronik Apollo and other commercial humanoids.\n- Methods: Gemini 2.0 backbone; Gemini Robotics-ER variant adds embodied reasoning + agentic tool use.\n- Results: Smooth real-world manipulation; on-device variant deployable.\n- Limitations: Closed weights; cloud dependency; multimodal reasoning latency vs reactive control trade-off.",
-          "tags": [
-            "Diffusion Policy"
-          ]
-        }
-      ],
-      "tags": [
-        "Diffusion Policy"
-      ]
-    },
     "Humanoid VLA": {
       "notes": [
         {
-          "ts": 1779792320.729013,
-          "content": "**Pi-0.5: A Vision-Language-Action Model with Open-World Generalization** (arXiv 2025; arxiv:2504.16054)\n- Contribution: First VLA shown to clean entirely unseen real-world kitchens and bedrooms across repeated trials.\n- Methods: Builds on Pi-0 flow-matching action expert; adds hierarchical sub-goal reasoning at the VLM layer.\n- Results: 60-80% task-completion success in novel residential environments.\n- Limitations: Long-horizon failures remain dominant; teleop data still expensive; not yet a deployable household product.",
-          "tags": [
-            "Humanoid VLA"
-          ]
-        },
-        {
-          "ts": 1779792320.7360349,
+          "ts": 1780042424.4547899,
           "content": "**GR00T N1: An Open Foundation Model for Generalist Humanoid Robots** (arXiv 2025; arxiv:2503.14734)\n- Contribution: First open humanoid foundation model with embedded-GPU latency budget.\n- Methods: Dual-system: VLM at 5-10 Hz + visuomotor diffusion-transformer at 100+ Hz.\n- Results: GR00T-N1-2B samples 16 actions in 63.9 ms on an L40 GPU.\n- Limitations: Narrow real-world dexterity benchmarks; sim2real still needs domain-randomization tuning.",
           "tags": [
             "Humanoid VLA"
-          ]
+          ],
+          "meta": {
+            "arxiv_id": "2503.14734",
+            "title": "GR00T N1: An Open Foundation Model for Generalist Humanoid Robots",
+            "authors": "NVIDIA Research",
+            "year": 2025,
+            "venue": "arXiv",
+            "key_contribution": "First open humanoid foundation model with embedded-GPU latency budget.",
+            "methods": "Dual-system: VLM at 5-10 Hz + visuomotor diffusion-transformer at 100+ Hz.",
+            "results": "GR00T-N1-2B samples 16 actions in 63.9 ms on an L40 GPU.",
+            "limitations": "Narrow real-world dexterity benchmarks; sim2real still needs domain-randomization tuning.",
+            "sub_topic": "Humanoid VLA"
+          }
         },
         {
-          "ts": 1779792320.7415476,
+          "ts": 1780042424.4596229,
           "content": "**Gemini Robotics: Bringing AI into the Physical World** (arXiv 2025; arxiv:2503.20020)\n- Contribution: Closed-source generalist VLA powering Apptronik Apollo and other commercial humanoids.\n- Methods: Gemini 2.0 backbone; Gemini Robotics-ER variant adds embodied reasoning + agentic tool use.\n- Results: Smooth real-world manipulation; on-device variant deployable.\n- Limitations: Closed weights; cloud dependency; multimodal reasoning latency vs reactive control trade-off.",
           "tags": [
             "Humanoid VLA"
-          ]
+          ],
+          "meta": {
+            "arxiv_id": "2503.20020",
+            "title": "Gemini Robotics: Bringing AI into the Physical World",
+            "authors": "Google DeepMind",
+            "year": 2025,
+            "venue": "arXiv",
+            "key_contribution": "Closed-source generalist VLA powering Apptronik Apollo and other commercial humanoids.",
+            "methods": "Gemini 2.0 backbone; Gemini Robotics-ER variant adds embodied reasoning + agentic tool use.",
+            "results": "Smooth real-world manipulation; on-device variant deployable.",
+            "limitations": "Closed weights; cloud dependency; multimodal reasoning latency vs reactive control trade-off.",
+            "sub_topic": "Humanoid VLA"
+          }
+        },
+        {
+          "ts": 1780042424.4638388,
+          "content": "**Pi-0.5: A Vision-Language-Action Model with Open-World Generalization** (arXiv 2025; arxiv:2504.16054)\n- Contribution: First VLA shown to clean entirely unseen real-world kitchens and bedrooms across repeated trials.\n- Methods: Builds on Pi-0 flow-matching action expert; adds hierarchical sub-goal reasoning at the VLM layer.\n- Results: 60-80% task-completion success in novel residential environments.\n- Limitations: Long-horizon failures remain dominant; teleop data still expensive; not yet a deployable household product.",
+          "tags": [
+            "Humanoid VLA"
+          ],
+          "meta": {
+            "arxiv_id": "2504.16054",
+            "title": "Pi-0.5: A Vision-Language-Action Model with Open-World Generalization",
+            "authors": "Physical Intelligence Team",
+            "year": 2025,
+            "venue": "arXiv",
+            "key_contribution": "First VLA shown to clean entirely unseen real-world kitchens and bedrooms across repeated trials.",
+            "methods": "Builds on Pi-0 flow-matching action expert; adds hierarchical sub-goal reasoning at the VLM layer.",
+            "results": "60-80% task-completion success in novel residential environments.",
+            "limitations": "Long-horizon failures remain dominant; teleop data still expensive; not yet a deployable household product.",
+            "sub_topic": "Humanoid VLA"
+          }
         }
       ],
       "tags": [
         "Humanoid VLA"
+      ]
+    },
+    "Diffusion Policy": {
+      "notes": [
+        {
+          "ts": 1780042424.4679725,
+          "content": "**Diffusion Policy: Visuomotor Policy Learning via Action Diffusion** (RSS 2023; arxiv:2303.04137)\n- Contribution: +46.9% over prior SOTA across 12 tasks / 4 benchmarks.\n- Methods: Receding-horizon prediction with DDPM-style conditional denoising on action sequences.\n- Results: Robust to multimodal demonstrations; stable across diverse manipulation tasks.\n- Limitations: Multi-step denoising slows inference; cross-embodiment transfer weak; needs depth for many tasks.",
+          "tags": [
+            "Diffusion Policy"
+          ],
+          "meta": {
+            "arxiv_id": "2303.04137",
+            "title": "Diffusion Policy: Visuomotor Policy Learning via Action Diffusion",
+            "authors": "Chi, C. et al.",
+            "year": 2023,
+            "venue": "RSS",
+            "key_contribution": "+46.9% over prior SOTA across 12 tasks / 4 benchmarks.",
+            "methods": "Receding-horizon prediction with DDPM-style conditional denoising on action sequences.",
+            "results": "Robust to multimodal demonstrations; stable across diverse manipulation tasks.",
+            "limitations": "Multi-step denoising slows inference; cross-embodiment transfer weak; needs depth for many tasks.",
+            "sub_topic": "Diffusion Policy"
+          }
+        }
+      ],
+      "tags": [
+        "Diffusion Policy"
       ]
     }
   }

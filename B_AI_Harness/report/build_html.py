@@ -74,9 +74,17 @@ img { max-width: 100%; height: auto; }
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 @media print {
-  body { margin: 0; max-width: none; padding: 1cm 1.5cm; font-size: 10.5pt; }
-  h2, h3 { page-break-after: avoid; }
+  body { margin: 0; max-width: none; padding: 0.6cm 0.9cm; font-size: 9pt; line-height: 1.3; }
+  h1 { font-size: 1.5em; margin-top: 0.5em; }
+  h2 { font-size: 1.18em; margin-top: 0.9em; page-break-after: avoid; }
+  h3 { font-size: 1.02em; margin-top: 0.6em; page-break-after: avoid; }
+  h4 { margin-top: 0.5em; }
+  p, li { margin: 0.2em 0; }
+  ul, ol { margin: 0.3em 0; }
+  pre { font-size: 0.78em; padding: 0.5em 0.7em; line-height: 1.3; }
+  table { font-size: 0.82em; }
   table, pre, blockquote { page-break-inside: avoid; }
+  blockquote { margin: 0.5em 0; padding: 0.3em 0.8em; }
   a { color: var(--fg); text-decoration: none; }
 }
 """

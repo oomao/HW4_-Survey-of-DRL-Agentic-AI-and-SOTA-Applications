@@ -29,7 +29,7 @@ topic                  抓 contribution
 這是 A 與 B 共同的骨幹。
 
 - **A 版**：人 + Claude 助手 走完一次，產出 11,575 字 survey
-- **B 版**：設計成 LLM-driven 自動化系統，9 papers / 25 tool calls / 0.04 s 跑完同樣 pipeline
+- **B 版**：設計成 LLM-driven 自動化系統，6 papers (deduped) / 22 tool calls / 100% efficiency / 0.04 s 跑完同樣 pipeline
 
 ---
 
@@ -58,19 +58,21 @@ topic                  抓 contribution
 ## ④ Expected Outcomes  ·  可實際拿出來檢驗的成品
 
 ### Version A
-- 📘 **完整書面報告** — 11,575 字 / 100+ refs / IEEE 排版 → [`A_DRL_Survey/report/HW4_DRL_Survey.html`](A_DRL_Survey/report/HW4_DRL_Survey.html)
+- 📘 **完整書面報告** — 11,575 字 / 100 refs / IEEE 排版 → [`A_DRL_Survey/report/HW4_DRL_Survey.html`](A_DRL_Survey/report/HW4_DRL_Survey.html)
 - 🎞 **Presentation** — 15 張 → [`A_DRL_Survey/slides/slides.md`](A_DRL_Survey/slides/slides.md)
 - 🤖 **PPO MVP** — CartPole reward 500/500 + 訓練曲線 → [`A_DRL_Survey/artifacts/`](A_DRL_Survey/artifacts/)
 - 🧠 **LLM Agent** — ReAct demo + transcript（offline 可重現）
 - 🌐 **Live demo** — [`A_DRL_Survey/docs/index.html`](A_DRL_Survey/docs/index.html)（GitHub Pages 可發佈）
-- 🗂 **References** — 100+ 條 BibTeX-ready
+- 🗂 **References** — 100 條 BibTeX-ready
 
 ### Version B
-- 📕 **System design report** — ≤5 頁書面（HTML / md），含 sequence diagram → [`B_AI_Harness/report/report.html`](B_AI_Harness/report/report.html)
+- 📕 **System design report** — ≤5 頁書面（HTML / md / PDF）→ [`B_AI_Harness/report/report.html`](B_AI_Harness/report/report.html)
 - 🖼 **Architecture infographic** — 6-panel SVG → [`B_AI_Harness/infographic/architecture.html`](B_AI_Harness/infographic/architecture.html)
-- ⚙ **Working MVP** — 9 papers / 25 tool calls / 0.04 s（offline 可跑） → [`B_AI_Harness/code/harness_demo.py`](B_AI_Harness/code/harness_demo.py)
-- 📜 **log.md** — 11 次設計 iteration + 11 條 decision table → [`B_AI_Harness/log.md`](B_AI_Harness/log.md)
-- 📊 **Evaluation plan** — 5 量化 + 5 質化 + 4 組 ablation 規格
+- 🎞 **Presentation** — 14 張 → [`B_AI_Harness/slides/slides.md`](B_AI_Harness/slides/slides.md)
+- ⚙ **Working MVP** — 6 papers (deduped) / 22 tool calls / 100% efficiency / 0.04 s（offline 可跑） → [`B_AI_Harness/code/harness_demo.py`](B_AI_Harness/code/harness_demo.py)
+- 📜 **log.md** — 14 次設計 iteration + 15 條 decision table → [`B_AI_Harness/log.md`](B_AI_Harness/log.md)
+- 📊 **Evaluation（實測）** — macro F1 0.74 / citation 100% / 效率 100% + 3-config ablation → [`B_AI_Harness/artifacts/eval_results.md`](B_AI_Harness/artifacts/eval_results.md)
+- ✅ **Tests** — 15 pytest（pipeline 不變量）→ [`B_AI_Harness/code/test_harness.py`](B_AI_Harness/code/test_harness.py)
 - 💾 **Persisted notes** — long-term memory 樣本 → [`B_AI_Harness/artifacts/notes.json`](B_AI_Harness/artifacts/notes.json)
 
 ---

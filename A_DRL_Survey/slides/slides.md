@@ -271,4 +271,4 @@ Thanks for listening!
 **Code:** [`code/ppo_demo.py`](code/ppo_demo.py)、[`code/llm_agent_demo.py`](code/llm_agent_demo.py)
 **Artifacts:** [`artifacts/`](artifacts/)
 
-References：100+ 篇（Nature, Science, NeurIPS/ICML/ICLR/CoRL/RSS/CVPR, arXiv 2024–2026）
+References：100 篇（Nature, Science, NeurIPS/ICML/ICLR/CoRL/RSS/CVPR, arXiv 2024–2026）

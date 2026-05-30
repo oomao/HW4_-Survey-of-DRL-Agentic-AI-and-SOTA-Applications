@@ -7,3 +7,6 @@ anthropic>=0.50.0
 
 # No other 3rd-party deps for the core harness — uses stdlib only
 # (json, ast, re, pathlib, dataclasses, typing).
+
+# Dev / test only (run: python -m pytest code/test_harness.py -v)
+pytest>=8.0

@@ -257,6 +257,43 @@ def _score(paper: dict, terms: list[str]) -> int:
     return sum(1 for t in terms if t in text)
 
 
+def _public_view(p: dict) -> dict:
+    """Project a corpus entry to the public arxiv_search response shape."""
+    return {
+        "arxiv_id": p["arxiv_id"],
+        "title": p["title"],
+        "authors": p["authors"],
+        "year": p["year"],
+        "venue": p["venue"],
+        "primary_category": p["primary_category"],
+        "abstract": p["abstract"],
+    }
+
+
+def search_scored(
+    query: str,
+    year_min: int = 2024,
+    year_max: int = 2026,
+    max_results: int = 10,
+) -> list[tuple[dict, int]]:
+    """
+    Relevance-ranked search returning (paper_view, score) pairs.
+
+    The score is exposed so the orchestrator can assign each paper to the
+    single sub-topic it is *most* relevant to (cross-topic de-duplication).
+    `arxiv_search` is the public, score-free tool built on top of this.
+    """
+    terms = [t for t in re.split(r"[\s,]+", query.lower()) if len(t) > 2]
+    if not terms:
+        return []
+
+    candidates = [p for p in CORPUS if year_min <= p["year"] <= year_max]
+    scored = [(p, _score(p, terms)) for p in candidates]
+    scored = [(p, s) for p, s in scored if s > 0]
+    scored.sort(key=lambda ps: (-ps[1], -ps[0]["year"]))
+    return [(_public_view(p), s) for p, s in scored[:max_results]]
+
+
 def arxiv_search(
     query: str,
     year_min: int = 2024,
@@ -274,30 +311,7 @@ def arxiv_search(
     Failure mode:
         If no results match the query, returns an empty list (not an error).
     """
-    terms = [t for t in re.split(r"[\s,]+", query.lower()) if len(t) > 2]
-    if not terms:
-        return []
-
-    candidates = [
-        p for p in CORPUS
-        if year_min <= p["year"] <= year_max
-    ]
-    scored = [(p, _score(p, terms)) for p in candidates]
-    scored = [(p, s) for p, s in scored if s > 0]
-    scored.sort(key=lambda ps: (-ps[1], -ps[0]["year"]))
-
-    out = []
-    for p, _s in scored[:max_results]:
-        out.append({
-            "arxiv_id": p["arxiv_id"],
-            "title": p["title"],
-            "authors": p["authors"],
-            "year": p["year"],
-            "venue": p["venue"],
-            "primary_category": p["primary_category"],
-            "abstract": p["abstract"],
-        })
-    return out
+    return [view for view, _s in search_scored(query, year_min, year_max, max_results)]
 
 
 # ---------------------------------------------------------------------------
@@ -397,7 +411,13 @@ class NoteStore:
     def _save(self, data: dict) -> None:
         self.path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
 
-    def add(self, topic: str, content: str, tags: list[str] | None = None) -> dict:
+    def add(
+        self,
+        topic: str,
+        content: str,
+        tags: list[str] | None = None,
+        meta: dict | None = None,
+    ) -> dict:
         data = self._load()
         topics = data.setdefault("topics", {})
         bucket = topics.setdefault(topic, {"notes": [], "tags": []})
@@ -405,6 +425,7 @@ class NoteStore:
             "ts": time.time(),
             "content": content,
             "tags": tags or [],
+            "meta": meta or {},
         })
         if tags:
             bucket["tags"] = sorted(set(bucket["tags"] + tags))
@@ -432,9 +453,19 @@ class NoteStore:
 _STORE = NoteStore(NOTE_STORE_PATH)
 
 
-def note_save(topic: str, content: str, tags: list[str] | None = None) -> dict:
+def note_save(
+    topic: str,
+    content: str,
+    tags: list[str] | None = None,
+    meta: dict | None = None,
+) -> dict:
     """
     Save a note to long-term memory under a topic key.
+
+    `meta` carries an optional structured payload (e.g. the paper record the
+    note was distilled from). Storing it makes the note store the single
+    source of truth: the Compiler reconstructs the report from meta alone and
+    never trusts LLM-inline facts.
 
     Returns:
         {topic, note_count, total_chars, recent_tags, persisted}
@@ -445,7 +476,7 @@ def note_save(topic: str, content: str, tags: list[str] | None = None) -> dict:
     if not topic.strip():
         return {"error": "topic must be non-empty", "persisted": False}
     try:
-        return _STORE.add(topic.strip(), content.strip(), tags)
+        return _STORE.add(topic.strip(), content.strip(), tags, meta)
     except OSError as e:
         return {"error": str(e), "persisted": False}
 
@@ -517,6 +548,10 @@ TOOL_SCHEMAS = [
                 "topic": {"type": "string"},
                 "content": {"type": "string"},
                 "tags": {"type": "array", "items": {"type": "string"}},
+                "meta": {
+                    "type": "object",
+                    "description": "Optional structured payload (e.g. the source paper record) used by the Compiler as source of truth.",
+                },
             },
             "required": ["topic", "content"],
         },

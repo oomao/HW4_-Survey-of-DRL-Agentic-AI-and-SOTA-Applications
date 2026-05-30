@@ -3,8 +3,9 @@
 > **DRL Research Assistant** — an LLM-driven harness that automates DRL literature surveys.
 > Submitted under the *AI Harness Systems Design and Analysis* syllabus.
 
-**Live infographic：** [`infographic/architecture.html`](infographic/architecture.html)
-**完整書面報告（HTML）：** [`report/report.html`](report/report.html) · [Markdown 原稿](report/report.md)
+**Live infographic：** [`infographic/architecture.html`](infographic/architecture.html) · [PDF](infographic/architecture.pdf)
+**完整書面報告（≤5 頁）：** [HTML](report/report.html) · [PDF](report/report.pdf) · [Markdown 原稿](report/report.md)
+**簡報（14 張）：** [`slides/slides.md`](slides/slides.md)
 **設計過程紀錄：** [`log.md`](log.md)
 **Live demo 入口：** [`docs/index.html`](docs/index.html)
 
@@ -84,11 +85,14 @@ PLAN  ──▶  EXECUTE (per sub-topic ReAct)  ──▶  CRITIC  ──▶  CO
 
 ## 五、Evaluation
 
-| 類型 | 指標 | 目標 |
-|---|---|---|
-| 量化 | Coverage F1, citation accuracy, latency, token cost, tool-call efficiency | F1 ≥ 0.7 / accuracy ≥ 95% / ≤ 120s / ≤ $0.50 / efficiency ≥ 80% |
-| 質性 | 5-pt Likert × 5 維度（helpfulness, accuracy, completeness, clarity, novelty） | 平均 ≥ 4/5 |
-| Ablation | full / −critic / −planner / mock LLM | 隔離每個 phase 的貢獻 |
+| 類型 | 指標 | 目標 | **實測（offline）** |
+|---|---|---|---|
+| 量化 | Coverage F1 / citation accuracy / tool-call efficiency | F1 ≥ 0.7 / ≥ 95% / ≥ 80% | **0.74 macro（1.00 flagship） / 100% / 100%** |
+| 量化 | 重複 paper 數 / latency | 0 / ≤ 120s | **0 / 0.04 s** |
+| 質性 | 5-pt Likert × 5 維度（helpfulness, accuracy, completeness, clarity, novelty） | 平均 ≥ 4/5 | rubric |
+| Ablation | full / −critic / −planner | 隔離每個 phase 的貢獻 | **F1 1.00 → 0.91 → 0.80** |
+
+> 實測數字由 `python code/eval.py` 產生，完整輸出見 [`artifacts/eval_results.md`](artifacts/eval_results.md)；15 個 pytest 守住 pipeline 不變量（`python -m pytest code/test_harness.py`）。
 
 ---
 
@@ -98,13 +102,16 @@ PLAN  ──▶  EXECUTE (per sub-topic ReAct)  ──▶  CRITIC  ──▶  CO
 pip install -r code/requirements.txt   # anthropic 為可選，offline 也能跑
 python code/harness_demo.py            # 跑預設 query
 python code/harness_demo.py "Survey foundation agents in 2024-2026"   # 自訂
+python code/eval.py                    # 跑 evaluation + ablation，產出實測數字
+python -m pytest code/test_harness.py  # 15 個測試（工具 + pipeline 不變量）
 ```
 
 **實際輸出：**
-- 預設 query "Survey robotics VLA models in 2024-2026" → **3 sub-topics、9 papers、4 unique IEEE citations**、25 tool calls，wallclock **0.04 s**（offline backend）。
+- 預設 query "Survey robotics VLA models in 2024-2026" → **3 sub-topics、6 papers（cross-topic 去重後）、6 unique IEEE citations**、22 tool calls、**tool 效率 100%**、**critic 觸發 1 輪**（撈回 seminal Diffusion Policy），wallclock **0.04 s**（offline backend）。
 - Transcript: [`artifacts/demo_run.md`](artifacts/demo_run.md)
 - 純報告: [`artifacts/compiled_report.md`](artifacts/compiled_report.md)
-- 持久化 notes: [`artifacts/notes.json`](artifacts/notes.json)
+- 持久化 notes（含結構化 `meta`，Compiler 的 source of truth）: [`artifacts/notes.json`](artifacts/notes.json)
+- 實測數字 + ablation: [`artifacts/eval_results.md`](artifacts/eval_results.md)
 
 ---
 
@@ -119,15 +126,20 @@ B_AI_Harness/
 │   └── build_html.py
 ├── infographic/
 │   └── architecture.html           ← 自含 SVG 視覺化（含 6 區塊）
-├── log.md                          ← AI-assisted design process（11 次 iteration）
+├── slides/
+│   └── slides.md                   ← 14 張簡報（Marp-compatible）
+├── log.md                          ← AI-assisted design process（14 次 iteration）
 ├── code/
 │   ├── tools.py                    ← 4 個工具實作 + 15 篇 mini paper corpus
-│   ├── harness_demo.py             ← 4-phase orchestrator
+│   ├── harness_demo.py             ← 4-phase orchestrator（search→dedup→critic→compile）
+│   ├── eval.py                     ← evaluation + ablation，產出實測數字
+│   ├── test_harness.py             ← 15 個 pytest（工具 + pipeline 不變量）
 │   └── requirements.txt
 ├── artifacts/                      ← demo 輸出（會被覆蓋）
 │   ├── demo_run.md
 │   ├── compiled_report.md
-│   └── notes.json
+│   ├── notes.json                  ← 含結構化 meta（Compiler 的 source of truth）
+│   └── eval_results.md             ← 實測 coverage / ablation 數字
 └── docs/
     └── index.html                  ← Live demo 入口
 ```
@@ -142,7 +154,7 @@ B_AI_Harness/
 | **Tool / Orchestration 設計** | 25% | `report/report.md` §3-4 + `code/tools.py` + `code/harness_demo.py` |
 | **Workflow 與邏輯清晰度** | 20% | `report/report.md` §4 + `infographic/architecture.html` 區塊 2-3 |
 | **Infographic 視覺表達** | 10% | `infographic/architecture.html`（6 panel SVG） |
-| **log.md 設計過程紀錄** | 10% | `log.md`（11 次 iteration + 11 條 decision table） |
+| **log.md 設計過程紀錄** | 10% | `log.md`（14 次 iteration + 15 條 decision table） |
 
 **Bonus**：完整實作 MVP + 端到端 demo + cross-link 到 Version A，形成 narrative arc。
 

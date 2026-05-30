@@ -35,6 +35,7 @@ from typing import Any
 
 from tools import (
     arxiv_search,
+    search_scored,
     paper_summarize,
     citation_format,
     note_save,
@@ -66,12 +67,34 @@ class HarnessRun:
     backend: str
     events: list[TraceEvent] = field(default_factory=list)
     tool_calls: int = 0
+    useful_tool_calls: int = 0
+    critic_rounds_fired: int = 0
     elapsed: float = 0.0
     sub_topics: list[str] = field(default_factory=list)
     compiled_report: str = ""
+    paper_ids: list[str] = field(default_factory=list)
+    summary_cache: dict[str, dict] = field(default_factory=dict)
 
     def log(self, phase: str, role: str, content: str) -> None:
         self.events.append(TraceEvent(phase, role, content))
+
+    def summarize_memoized(self, arxiv_id: str) -> dict:
+        """paper_summarize with within-run memoization (short-term memory).
+
+        A repeated id is served from cache and does *not* count as a new tool
+        call — this is the controller reusing short-term memory rather than
+        re-paying for an identical observation.
+        """
+        if arxiv_id in self.summary_cache:
+            self.log("EXECUTE", "observation",
+                     f"(memoized) reused cached summary for {arxiv_id}")
+            return self.summary_cache[arxiv_id]
+        s = paper_summarize(arxiv_id)
+        self.tool_calls += 1
+        if "error" not in s:
+            self.useful_tool_calls += 1
+            self.summary_cache[arxiv_id] = s
+        return s
 
 
 # ---------------------------------------------------------------------------
@@ -158,37 +181,72 @@ def choose_planner():
 
 
 # ---------------------------------------------------------------------------
-# PHASE 2 — Executor (per sub-topic ReAct loop)
+# PHASE 2 — Executor (search -> cross-topic dedup -> summarize -> note_save)
 # ---------------------------------------------------------------------------
 
-def execute_subtopic(
+def search_subtopic(
     sub_topic: str,
     run: HarnessRun,
-    per_topic_papers: int = 3,
-) -> list[dict]:
-    """For one sub-topic: search -> top-K -> summarize each -> note_save."""
+    max_results: int = 4,
+    year_min: int = 2024,
+) -> list[tuple[dict, int]]:
+    """ReAct search step for one sub-topic. Returns [(paper, score), ...]."""
     search_query = SUBTOPIC_QUERIES.get(sub_topic, sub_topic.lower())
     run.log("EXECUTE", "agent",
             f"Thought: I need to gather recent papers on '{sub_topic}'.")
     run.log("EXECUTE", "action",
-            f"arxiv_search(query={search_query!r}, year_min=2024, year_max=2026, max_results={per_topic_papers})")
-    papers = arxiv_search(search_query, year_min=2024, year_max=2026, max_results=per_topic_papers)
+            f"arxiv_search(query={search_query!r}, year_min={year_min}, year_max=2026, max_results={max_results})")
+    scored = search_scored(search_query, year_min=year_min, year_max=2026, max_results=max_results)
     run.tool_calls += 1
+    run.useful_tool_calls += 1
     run.log("EXECUTE", "observation",
-            f"Returned {len(papers)} papers: " + ", ".join(p["arxiv_id"] for p in papers))
+            "Returned " + (", ".join(f"{p['arxiv_id']}(score {s})" for p, s in scored) or "nothing"))
+    return scored
 
-    summarised: list[dict] = []
+
+def assign_papers(
+    scored_by_topic: dict[str, list[tuple[dict, int]]],
+    sub_topics: list[str],
+    already_assigned: dict[str, str] | None = None,
+) -> dict[str, list[dict]]:
+    """Cross-topic de-duplication.
+
+    Each unique paper is assigned to the single sub-topic where it scores
+    highest (ties break toward the earlier sub-topic in the plan). A paper
+    already claimed by a previous round is never reassigned. This is what
+    stops the same paper appearing under three headings.
+    """
+    already_assigned = already_assigned or {}
+    best: dict[str, tuple[str, int, dict]] = {}  # arxiv_id -> (topic, score, paper)
+    for topic in sub_topics:
+        for rank, (paper, score) in enumerate(scored_by_topic.get(topic, [])):
+            aid = paper["arxiv_id"]
+            if aid in already_assigned:
+                continue
+            if aid not in best or score > best[aid][1]:
+                best[aid] = (topic, score, paper)
+
+    per_topic: dict[str, list[dict]] = {t: [] for t in sub_topics}
+    for aid, (topic, _score, paper) in best.items():
+        per_topic[topic].append(paper)
+    return per_topic
+
+
+def summarize_and_store(
+    sub_topic: str,
+    papers: list[dict],
+    run: HarnessRun,
+) -> None:
+    """Summarize each assigned paper and persist a structured note (meta)."""
     for p in papers:
         run.log("EXECUTE", "agent",
                 f"Thought: Summarise paper {p['arxiv_id']} ({p['title'][:50]}…).")
         run.log("EXECUTE", "action", f"paper_summarize(arxiv_id={p['arxiv_id']!r})")
-        s = paper_summarize(p["arxiv_id"])
-        run.tool_calls += 1
+        s = run.summarize_memoized(p["arxiv_id"])
         if "error" in s:
             run.log("EXECUTE", "observation", f"ERROR: {s['error']}")
             continue
-        run.log("EXECUTE", "observation",
-                f"contribution: {s['key_contribution']}")
+        run.log("EXECUTE", "observation", f"contribution: {s['key_contribution']}")
 
         body = (
             f"**{s['title']}** ({s['venue']} {s['year']}; arxiv:{s['arxiv_id']})\n"
@@ -197,16 +255,39 @@ def execute_subtopic(
             f"- Results: {s['results']}\n"
             f"- Limitations: {s['limitations']}"
         )
-        ack = note_save(sub_topic, body, tags=[sub_topic])
+        meta = {k: s[k] for k in
+                ("arxiv_id", "title", "authors", "year", "venue",
+                 "key_contribution", "methods", "results", "limitations")}
+        meta["sub_topic"] = sub_topic
+        ack = note_save(sub_topic, body, tags=[sub_topic], meta=meta)
         run.tool_calls += 1
+        run.useful_tool_calls += 1
         run.log("EXECUTE", "action",
-                f"note_save(topic={sub_topic!r}, content=<{len(body)} chars>)")
+                f"note_save(topic={sub_topic!r}, content=<{len(body)} chars>, meta=<paper record>)")
         run.log("EXECUTE", "observation",
-                f"note_count={ack['note_count']} total_chars={ack['total_chars']}")
-        summarised.append({**p, **{k: s[k] for k in
-                                   ("key_contribution", "methods", "results", "limitations")}})
+                f"note_count={ack['note_count']} total_chars={ack['total_chars']} persisted={ack['persisted']}")
 
-    return summarised
+
+def view_from_store(sub_topics: list[str]) -> dict[str, list[dict]]:
+    """Reconstruct the per-topic paper view *purely from the note store*.
+
+    This is the Compiler's only source of truth — it reads persisted note
+    `meta`, de-duplicates by arxiv_id (keeping the first persisted topic), and
+    never trusts any in-context fact the LLM did not commit via note_save.
+    """
+    store = get_note_store()
+    per_topic: dict[str, list[dict]] = {t: [] for t in sub_topics}
+    seen: set[str] = set()
+    for topic in sub_topics:
+        bucket = store.get_topic(topic)
+        for note in bucket.get("notes", []):
+            meta = note.get("meta") or {}
+            aid = meta.get("arxiv_id")
+            if not aid or aid in seen:
+                continue
+            seen.add(aid)
+            per_topic[topic].append(meta)
+    return per_topic
 
 
 # ---------------------------------------------------------------------------
@@ -216,14 +297,22 @@ def execute_subtopic(
 def critic_review(
     run: HarnessRun,
     sub_topics: list[str],
-    all_papers: dict[str, list[dict]],
-    target_per_topic: int = 2,
+    view: dict[str, list[dict]],
+    target_per_topic: int = 1,
 ) -> list[str]:
-    """Return list of sub-topics that need more search; empty if coverage OK."""
-    weak = [t for t in sub_topics if len(all_papers.get(t, [])) < target_per_topic]
+    """Binary coverage check over the *de-duplicated* store view.
+
+    A sub-topic is weak if, after cross-topic de-duplication, it owns fewer
+    than `target_per_topic` papers — i.e. all of its hits were more relevant
+    to another sub-topic, leaving it with no distinctive coverage.
+    """
+    counts = {t: len(view.get(t, [])) for t in sub_topics}
+    run.log("CRITIC", "agent",
+            "Post-dedup coverage: " + ", ".join(f"{t}={c}" for t, c in counts.items()))
+    weak = [t for t in sub_topics if counts[t] < target_per_topic]
     if weak:
         run.log("CRITIC", "agent",
-                f"Coverage gap: {weak}. Recommending one extra search per gap.")
+                f"Coverage GAP on {weak} → broadening year range and re-searching (1 round).")
     else:
         run.log("CRITIC", "agent",
                 f"Coverage check passed for all {len(sub_topics)} sub-topics.")
@@ -264,20 +353,23 @@ def compile_report(
     run: HarnessRun,
     query: str,
     sub_topics: list[str],
-    all_papers: dict[str, list[dict]],
+    view: dict[str, list[dict]],
 ) -> str:
-    title = "A Mini-Survey on " + query.strip().rstrip(".?!").title()
-    n_papers = sum(len(ps) for ps in all_papers.values())
+    # Strip a leading "Survey " so the title doesn't read "Mini-Survey on Survey…",
+    # and keep the query verbatim so acronyms (VLA, RLHF) keep their casing.
+    topic = re.sub(r"^\s*survey\s+", "", query.strip().rstrip(".?!"), flags=re.IGNORECASE)
+    title = "A Mini-Survey on " + topic
+    n_papers = sum(len(ps) for ps in view.values())
     intro = (
         f"This mini-survey was compiled by an AI Harness from {n_papers} papers across "
         f"{len(sub_topics)} sub-topic(s): {', '.join(sub_topics)}. "
-        f"All citations come from a tool-verified arXiv lookup; no LLM-generated paper IDs "
-        f"are accepted by the Compiler stage."
+        f"Every entry below is reconstructed from the persistent note store (each note's "
+        f"structured `meta`); no LLM-inline paper IDs or facts are accepted by the Compiler stage."
     )
 
     section_blocks = []
     for st in sub_topics:
-        papers = all_papers.get(st, [])
+        papers = view.get(st, [])
         if not papers:
             continue
         bullet_lines = []
@@ -293,7 +385,7 @@ def compile_report(
     rows = ["| Paper | Sub-topic | Year | Venue | One-line contribution |",
             "|---|---|---|---|---|"]
     for st in sub_topics:
-        for p in all_papers.get(st, []):
+        for p in view.get(st, []):
             rows.append(
                 f"| {p['title'][:48]} | {st} | {p['year']} | {p['venue']} | "
                 f"{p['key_contribution'][:70]} |"
@@ -303,13 +395,15 @@ def compile_report(
     refs: list[str] = []
     seen: set[str] = set()
     for st in sub_topics:
-        for p in all_papers.get(st, []):
+        for p in view.get(st, []):
             if p["arxiv_id"] in seen:
                 continue
             seen.add(p["arxiv_id"])
             refs.append(f"[{len(refs)+1}] " + citation_format(p, style="IEEE"))
             run.tool_calls += 1
+            run.useful_tool_calls += 1
     references = "\n\n".join(refs)
+    run.paper_ids = list(seen)
 
     return REPORT_TEMPLATE.format(
         title=title,
@@ -330,43 +424,75 @@ def compile_report(
 # End-to-end runner
 # ---------------------------------------------------------------------------
 
-def run_harness(query: str, max_critic_rounds: int = 1) -> HarnessRun:
+def _assigned_map(view: dict[str, list[dict]]) -> dict[str, str]:
+    return {p["arxiv_id"]: topic for topic, papers in view.items() for p in papers}
+
+
+def run_harness(
+    query: str,
+    max_critic_rounds: int = 1,
+    enable_critic: bool = True,
+    enable_planner: bool = True,
+) -> HarnessRun:
     reset_note_store()
     backend_name, planner = choose_planner()
     run = HarnessRun(query=query, backend=backend_name)
     t0 = time.time()
 
-    # PHASE 1
+    # PHASE 1 — PLAN
     run.log("PLAN", "agent", f"User query: {query!r}")
-    plan = planner(query)
+    if enable_planner:
+        plan = planner(query)
+    else:
+        # ablation: skip decomposition, treat the whole query as one sub-topic
+        plan = ["VLA foundation models"]
     run.sub_topics = plan
     run.log("PLAN", "agent", f"Plan: {len(plan)} sub-topics → {plan}")
 
-    # PHASE 2
-    all_papers: dict[str, list[dict]] = {}
+    # PHASE 2 — EXECUTE: search every sub-topic, then cross-topic dedup,
+    # then summarize + persist only the paper assigned to each sub-topic.
+    scored_by_topic: dict[str, list[tuple[dict, int]]] = {}
     for st in plan:
         run.log("EXECUTE", "agent", f"--- Sub-topic: {st} ---")
-        all_papers[st] = execute_subtopic(st, run, per_topic_papers=3)
+        scored_by_topic[st] = search_subtopic(st, run, max_results=4, year_min=2024)
 
-    # PHASE 3
-    for round_i in range(max_critic_rounds):
-        weak = critic_review(run, plan, all_papers, target_per_topic=2)
-        if not weak:
-            break
-        for st in weak:
-            run.log("EXECUTE", "agent", f"Critic-triggered re-search for {st!r}.")
-            extra = execute_subtopic(st, run, per_topic_papers=4)
-            existing_ids = {p["arxiv_id"] for p in all_papers[st]}
-            for p in extra:
-                if p["arxiv_id"] not in existing_ids:
-                    all_papers[st].append(p)
+    assigned = assign_papers(scored_by_topic, plan)
+    run.log("EXECUTE", "agent",
+            "Cross-topic dedup → " +
+            ", ".join(f"{t}: [{', '.join(p['arxiv_id'] for p in ps)}]" for t, ps in assigned.items()))
+    for st in plan:
+        summarize_and_store(st, assigned[st], run)
 
-    # PHASE 4
+    view = view_from_store(plan)
+
+    # PHASE 3 — CRITIC (binary coverage check + ≤1 broadened re-search round)
+    if enable_critic:
+        for _round in range(max_critic_rounds):
+            weak = critic_review(run, plan, view, target_per_topic=1)
+            if not weak:
+                break
+            run.critic_rounds_fired += 1
+            scored_weak: dict[str, list[tuple[dict, int]]] = {}
+            for st in weak:
+                run.log("EXECUTE", "agent",
+                        f"Critic-triggered re-search for {st!r} (year_min=2022).")
+                scored_weak[st] = search_subtopic(st, run, max_results=4, year_min=2022)
+            extra = assign_papers(scored_weak, weak, already_assigned=_assigned_map(view))
+            run.log("EXECUTE", "agent",
+                    "Re-search dedup → " +
+                    ", ".join(f"{t}: [{', '.join(p['arxiv_id'] for p in ps)}]" for t, ps in extra.items()))
+            for st in weak:
+                summarize_and_store(st, extra[st], run)
+            view = view_from_store(plan)
+    else:
+        run.log("CRITIC", "agent", "[ablation] critic disabled — skipping coverage check.")
+
+    # PHASE 4 — COMPILE (purely from the persistent note store)
     run.elapsed = time.time() - t0
-    run.compiled_report = compile_report(run, query, plan, all_papers)
+    run.compiled_report = compile_report(run, query, plan, view)
     run.log("COMPILE", "agent",
-            f"Report compiled ({len(run.compiled_report)} chars, "
-            f"{run.tool_calls} total tool calls).")
+            f"Report compiled from note store ({len(run.compiled_report)} chars, "
+            f"{run.tool_calls} total tool calls, {run.critic_rounds_fired} critic round(s) fired).")
     return run
 
 
@@ -382,6 +508,9 @@ def render_transcript(run: HarnessRun) -> str:
         f"- **Backend**: {run.backend}",
         f"- **Sub-topics**: {run.sub_topics}",
         f"- **Total tool calls**: {run.tool_calls}",
+        f"- **Tool-call efficiency**: {run.useful_tool_calls}/{run.tool_calls} "
+        f"= {(run.useful_tool_calls / run.tool_calls * 100 if run.tool_calls else 0):.0f}%",
+        f"- **Critic rounds fired**: {run.critic_rounds_fired}",
         f"- **Wallclock**: {run.elapsed:.2f}s",
         "",
         "## Phase Transcript",
@@ -411,6 +540,8 @@ def main() -> None:
     print(f"[harness] backend            : {run.backend}")
     print(f"[harness] sub-topics         : {run.sub_topics}")
     print(f"[harness] tool calls         : {run.tool_calls}")
+    print(f"[harness] tool efficiency    : {run.useful_tool_calls}/{run.tool_calls}")
+    print(f"[harness] critic rounds      : {run.critic_rounds_fired}")
     print(f"[harness] wallclock          : {run.elapsed:.2f}s")
     print(f"[harness] transcript         -> {transcript_path}")
     print(f"[harness] compiled report    -> {report_path}")

@@ -3,11 +3,13 @@
 > **DRL Research Assistant** — an LLM-driven harness that automates DRL literature surveys.
 > Submitted under the *AI Harness Systems Design and Analysis* syllabus.
 
-**Live infographic：** [`infographic/architecture.html`](infographic/architecture.html) · [PDF](infographic/architecture.pdf)
+**資訊圖表（Infographic）：** [PNG 一頁式](infographic/architecture.png) · [HTML 互動版](infographic/architecture.html) · [PDF](infographic/architecture.pdf)
 **完整書面報告（≤5 頁）：** [HTML](report/report.html) · [PDF](report/report.pdf) · [Markdown 原稿](report/report.md)
 **簡報（14 張）：** [`slides/slides.md`](slides/slides.md)
 **設計過程紀錄：** [`../AI_CHAT/log.md`](../AI_CHAT/log.md)（與 AI 對話 session 同放 `AI_CHAT/`）
 **Live demo 入口：** [`docs/index.html`](docs/index.html)
+
+![AI Harness — 一頁式資訊圖表](infographic/architecture.png)
 
 ---
 
@@ -155,7 +157,7 @@ B_AI_Harness/
 | **AI 系統設計完整性** | 35% | `report/report.md` §2 系統架構 + `infographic/architecture.html` 區塊 1 |
 | **Tool / Orchestration 設計** | 25% | `report/report.md` §3-4 + `code/tools.py` + `code/harness_demo.py` |
 | **Workflow 與邏輯清晰度** | 20% | `report/report.md` §4 + `infographic/architecture.html` 區塊 2-3 |
-| **Infographic 視覺表達** | 10% | `infographic/architecture.html`（6 panel SVG） |
+| **Infographic 視覺表達** | 10% | `infographic/architecture.png`（一頁式總覽）+ `architecture.html`（6 panel 互動版） |
 | **log.md 設計過程紀錄** | 10% | [`../AI_CHAT/log.md`](../AI_CHAT/log.md)（15 次 iteration + 16 條 decision table；與 AI 對話 session 同放 `AI_CHAT/`） |
 
 **Bonus**：完整實作 MVP + 端到端 demo + cross-link 到 Version A，形成 narrative arc。

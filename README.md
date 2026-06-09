@@ -1,5 +1,7 @@
 # HW4 — DRL Survey × AI Harness
 
+![AI Harness — 一頁式資訊圖表](B_AI_Harness/infographic/architecture.png)
+
 > 從「寫一份 DRL Survey 為什麼這麼痛」這個問題出發，把流程拆成 pipeline，再用兩種方式交付：
 > **A** 親自走完一次 pipeline 產出 survey 成品；**B** 設計能跑這個 pipeline 的 AI Harness 系統。
 

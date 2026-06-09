@@ -1,5 +1,7 @@
 # HW4 Version B — AI Harness Systems Design
 
+![AI Harness — 一頁式資訊圖表](infographic/architecture.png)
+
 > **DRL Research Assistant** — an LLM-driven harness that automates DRL literature surveys.
 > Submitted under the *AI Harness Systems Design and Analysis* syllabus.
 
@@ -8,8 +10,6 @@
 **簡報（14 張）：** [`slides/slides.md`](slides/slides.md)
 **設計過程紀錄：** [`../AI_CHAT/log.md`](../AI_CHAT/log.md)（與 AI 對話 session 同放 `AI_CHAT/`）
 **Live demo 入口：** [`docs/index.html`](docs/index.html)
-
-![AI Harness — 一頁式資訊圖表](infographic/architecture.png)
 
 ---
 

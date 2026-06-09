@@ -28,7 +28,7 @@ h1 { font-size: 1.9em; margin-top: 1.4em; border-bottom: 2px solid var(--accent)
 h2 { font-size: 1.35em; margin-top: 1.8em; color: var(--accent); }
 h3 { font-size: 1.1em; margin-top: 1.4em; }
 h4 { font-size: 1.0em; margin-top: 1.2em; color: var(--muted); }
-p, li { text-align: justify; }
+p, li { text-align: left; }
 ul, ol { padding-left: 1.4em; }
 strong { color: #0c4a6e; }
 code {
@@ -85,58 +85,52 @@ a:hover { text-decoration: underline; }
 </blockquote>
 <h2 id="1-problem-definition-use-case">1. Problem Definition &amp; Use Case</h2>
 <h3 id="11">1.1 痛點</h3>
-<p>對於修 DRL 課程的研究生，<strong>為一個新主題做文獻綜述</strong>是反覆出現、耗時且容易遺漏 SOTA 的工作：
-- arXiv 每天上百篇新 paper；
-- 不同主題涵蓋面廣（VLA / Diffusion Policy / RLHF / Sim2Real ...）；
-- 引用格式（IEEE / ACM / BibTeX）轉換手動費時；
-- 主題之間的 cross-cutting insight（如「五條 SOTA 主軸的交叉點」）需要 across-paper synthesis。</p>
+<p>對於修 DRL 課程的研究生，<strong>為一個新主題做文獻綜述</strong>是反覆出現、耗時且容易遺漏 SOTA 的工作：</p>
+<ul>
+<li>arXiv 每天上百篇新 paper；</li>
+<li>不同主題涵蓋面廣（VLA / Diffusion Policy / RLHF / Sim2Real ...）；</li>
+<li>引用格式（IEEE / ACM / BibTeX）轉換手動費時；</li>
+<li>主題之間的 cross-cutting insight（如「五條 SOTA 主軸的交叉點」）需要 across-paper synthesis。</li>
+</ul>
 <h3 id="12">1.2 目標使用者</h3>
-<table>
-<thead>
-<tr>
-<th>Persona</th>
-<th>用途</th>
-<th>典型 query</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>研究生</td>
-<td>HW 文獻綜述</td>
-<td>"幫我整理 2024–2026 robotics VLA 模型的 SOTA"</td>
-</tr>
-<tr>
-<td>研究員</td>
-<td>進入新領域</td>
-<td>"AlphaGo lineage 12 年的演化重點？"</td>
-</tr>
-<tr>
-<td>寫論文者</td>
-<td>蒐集 Related Work</td>
-<td>"PPO 與 GRPO 的關鍵差異？"</td>
-</tr>
-</tbody>
-</table>
+<p>三類使用者共用同一個 workflow：<strong>研究生</strong>（HW 文獻綜述）、<strong>研究員</strong>（進入新領域，如「AlphaGo lineage 12 年的演化重點」）、<strong>寫論文者</strong>（蒐集 Related Work，如「PPO 與 GRPO 的關鍵差異」）。</p>
 <h3 id="13-ai-harness-llm">1.3 為什麼用 AI Harness（而不是單一 LLM 對話）</h3>
 <p>單純把問題丟給 ChatGPT 有三個 fundamental 問題：(1) <strong>知識截止</strong> — LLM 不知道 2025–2026 新 paper；(2) <strong>幻覺引用</strong> — LLM 常編造看似真實但不存在的 arXiv ID；(3) <strong>無 stateful 規劃</strong> — 無法把大型查詢拆解成多階段執行並彙整。</p>
 <p>AI Harness 用 <strong>LLM as controller + 外部工具 + 記憶體</strong> 解這三點：工具給 LLM「即時 + 可驗證」的事實，memory 維持跨輪 state，orchestration 確保複雜任務不會丟步驟。</p>
 <hr />
 <h2 id="2-ai-harness-system-architecture">2. AI Harness System Architecture</h2>
-<p>資料流：<strong>User Query → LLM Controller（Planner → Reasoner → Critic → Compiler）→ Tools (T1–T4) / 雙層 Memory → Structured Survey Report（IEEE refs）</strong>。Controller 居中協調並以不同 system prompt 切換四個 sub-role；Tools 提供即時且可驗證的外部事實；Memory 維持跨輪 state；最終輸出一份結構化 survey。</p>
+<p>資料流：<strong>User Query → LLM Controller（Planner → Reasoner → Critic → Compiler）→ Tools (T1–T4) / 雙層 Memory → Structured Survey Report（IEEE refs）</strong>。三條原則貫穿全系統：(1) <strong>LLM 只做它擅長的</strong>——分解、推理、合成；事實取得與持久化交給工具；(2) <strong>每一條進入最終報告的事實都必須可追溯到一次真實 tool call</strong>，不接受 inline 編造；(3) <strong>複雜度由有界、可檢查的階段吸收</strong>，而非賭一個長 ReAct loop 不丟步驟。Controller 以不同 system prompt 切換四個 sub-role；Tools 給即時且可驗證的外部事實；Memory 維持跨輪 state。</p>
 <blockquote>
 <p>完整視覺化架構圖（User / LLM / Memory / Tools / External / Output 的連線與色彩編碼）見 <a href="../infographic/architecture.html"><code>infographic/architecture.html</code></a> 區塊 1。</p>
 </blockquote>
 <h3 id="21">2.1 三個核心元件</h3>
 <ol>
 <li><strong>LLM Controller</strong> — 四個 sub-role 共用同一個 model（Claude Haiku 4.5），透過不同 system prompt 切換角色，無需多個 model instance。</li>
-<li><strong>Memory</strong> — 雙層：
-   - <em>Short-term</em>：當輪對話 history（LLM context window）+ within-run 的 summary memoization cache（同一篇 paper 不重複 summarize，是 tool 效率 100% 的來源）。
-   - <em>Long-term</em>：JSON-backed note store（per-topic，每則 note 附結構化 <code>meta</code>），跨輪持久化，且是 Compiler <strong>唯一</strong>的 source of truth。</li>
-<li><strong>Tools</strong> — 4 個 function-callable APIs，每個都有 strict JSON schema；所有呼叫都先經 schema-validated dispatch（§3.6）驗證才執行。</li>
+<li>
+<p><strong>Memory</strong> — 雙層：</p>
+<ul>
+<li><em>Short-term</em>：當輪對話 history（LLM context window）+ within-run 的 summary memoization cache（同一篇 paper 不重複 summarize，是 tool 效率 100% 的來源）。</li>
+<li><em>Long-term</em>：JSON-backed note store（per-topic，每則 note 附結構化 <code>meta</code>），跨輪持久化，且是 Compiler <strong>唯一</strong>的 source of truth。</li>
+</ul>
+</li>
+<li>
+<p><strong>Tools</strong> — 4 個 function-callable APIs，每個都有 strict JSON schema；所有呼叫都先經 schema-validated dispatch（§3.6）驗證才執行。</p>
+</li>
 </ol>
+<h3 id="22-controller-multi-agent">2.2 關鍵抉擇：單一 Controller，而非 multi-agent</h3>
+<p>最大的架構決策是<strong>不</strong>把四個 sub-role 拆成四個獨立 agent（如 MetaGPT / ChatDev 的多 instance）。三個理由：</p>
+<ul>
+<li><strong>Token 成本</strong>：multi-agent 每個角色都要重讀整個 context，同一份 survey 任務 token 量約 ×4；單一 controller 用 system prompt 切角色、共享 context window，成本維持 ×1。</li>
+<li><strong>可觀測性</strong>：single-threaded loop 的每一步 <code>Thought / Action / Observation</code> 都在同一條 trace 上，bug 可定位到具體 phase；multi-agent 常退化成「到底哪個 agent 錯了」的疑案。</li>
+<li><strong>與業界一致</strong>：Anthropic Claude Code 的單線程 master loop 即是此取向——當任務不需要真正的平行執行或對立意見時，single controller 永遠 simpler &amp; cheaper。</li>
+</ul>
+<p>這不是「少做」，而是<strong>把複雜度放在 orchestration（§4）而非 agent 數量</strong>：複雜度由 plan→critic 的階段化吸收，而不是由更多 LLM instance 製造。</p>
 <hr />
 <h2 id="3-tool-design3-4">3. Tool Design（≥3，本系統 4 個）</h2>
 <p>每個工具設計遵循 <strong>三原則</strong>：(a) 單一職責；(b) 嚴格 JSON schema（input/output）；(c) 失敗時回 actionable error 而非 stack trace。</p>
+<blockquote>
+<p><strong>為什麼正好 4 個工具？</strong> 初版列了 7 個，砍掉 3 個「假工具」：<code>report_compile</code>（那是 Compiler <strong>phase</strong> 的責任）、<code>paper_full_text_download</code>（abstract + structured summary 已足夠寫 mini-survey，抓全文是 token 與延遲的浪費）、<code>citation_dedup</code>（去重是 compile-time logic，不該暴露成 LLM 可呼叫的動作）。原則：<strong>工具數 = 系統的 eval / failure surface</strong>——每多一個工具，schema、失敗 mode、evaluation 維度都跟著膨脹。單一職責 + ≤5 工具是刻意的克制。</p>
+</blockquote>
 <h3 id="31-tool-1-arxiv_search">3.1 Tool 1 — <code>arxiv_search</code></h3>
 <pre><code class="language-python">def arxiv_search(query, year_min=2024, year_max=2026, max_results=10) -&gt; list[dict]
 # returns: list of {arxiv_id, title, authors, abstract, year, primary_category}
@@ -157,43 +151,8 @@ a:hover { text-decoration: underline; }
 # meta = structured paper record → the Compiler's source of truth
 </code></pre>
 <p><strong>設計考量</strong>：這是 <strong>memory 與 tools 的橋樑</strong> — 透過工具呼叫操作 memory，LLM 不需要直接看到底層 storage 細節。<code>topic</code> 為主鍵讓後續 Compiler 能按主題分組取出 notes。</p>
-<h3 id="35-tools">3.5 Tools 比較表</h3>
-<table>
-<thead>
-<tr>
-<th>工具</th>
-<th>副作用</th>
-<th>對外連線</th>
-<th>失敗 mode</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>arxiv_search</code></td>
-<td>無（讀取）</td>
-<td>可選 arXiv API</td>
-<td>network error → fallback to offline cache</td>
-</tr>
-<tr>
-<td><code>paper_summarize</code></td>
-<td>無</td>
-<td>可選 arXiv</td>
-<td>unknown ID → 回 <code>{"error": "..."}</code> 而非 raise</td>
-</tr>
-<tr>
-<td><code>citation_format</code></td>
-<td>無</td>
-<td>無</td>
-<td>missing field → 用 <code>&lt;unknown&gt;</code> 占位</td>
-</tr>
-<tr>
-<td><code>note_save</code></td>
-<td><strong>有</strong>（寫入 JSON store）</td>
-<td>無</td>
-<td>disk full → log + return ack with <code>persisted: false</code></td>
-</tr>
-</tbody>
-</table>
+<h3 id="35-mode">3.5 副作用 / 失敗 mode 一覽</h3>
+<p>四個工具的 side-effect、對外連線、失敗 mode 一覽見 <a href="../infographic/architecture.html"><code>infographic</code></a> 區塊 4（與程式同源）。一句話：只有 <code>note_save</code> 有副作用（寫 <code>notes.json</code>），其餘皆 read-only / pure；每個失敗都回結構化 error 而非 raise。</p>
 <h3 id="36-schema-validated-dispatch">3.6 工具呼叫的邊界守衛（schema-validated dispatch）</h3>
 <p>四個工具不是被直接呼叫，而是統一經過 <code>dispatch_tool(name, input)</code>：先用該工具的 <code>TOOL_SCHEMAS</code> 驗證（工具存在、<code>required</code> 欄位齊、型別正確、<code>style</code> 在 enum 內），通過才路由到 <code>TOOL_REGISTRY</code> 的實作。這把「function-callable + strict schema」從文件變成 <strong>runtime 事實</strong>，也是三道 guardrail 的落點：</p>
 <ul>
@@ -226,22 +185,9 @@ PHASE 4  COMPILE      read notes back FROM THE STORE → templated Markdown
 </code></pre>
 <p>關鍵設計：<strong>de-dup 發生在 summarize 之前</strong>（依 relevance score 把每篇 paper 指派給「最相關的單一 sub-topic」），所以同一篇 paper 不會出現在三個段落、也不會被重複 summarize；而 <strong>Compiler 只從 note store 讀回 <code>meta</code></strong> 重建報告，不接受任何 LLM inline 編造的 fact。</p>
 <h3 id="42-execute-react-search-dedup-summarize">4.2 EXECUTE 細節（ReAct search → dedup → summarize）</h3>
-<pre><code># (a) ReAct search per sub-topic — collect relevance-scored candidates
-for sub_topic in plan.sub_topics:
-    Thought : &quot;Gather recent papers on {sub_topic}.&quot;
-    Action  : arxiv_search(sub_topic, year_min=2024, max_results=4)
-    Obs     : [(paper, score), ...]
-
-# (b) cross-topic dedup — each paper → its single best-fit sub-topic
-assign = argmax_by_score(scored_by_topic)   # ties break toward earlier topic
-
-# (c) summarize only the assigned papers, then persist structured notes
-for sub_topic, papers in assign.items():
-    for paper in papers:
-        Action : paper_summarize(paper.id)        # memoized within the run
-        Obs    : {key_contribution, methods, ...}
-        Action : note_save(sub_topic, body, meta=&lt;paper record&gt;)
-        Obs    : {note_count, persisted: true}
+<pre><code>(a) per sub-topic ReAct：Thought → Action arxiv_search(...) → Obs [(paper, score), ...]
+(b) cross-topic dedup：assign = argmax_by_score(...)   # 每篇 paper → 單一最相關 sub-topic（平手取較前者）
+(c) 只對指派到的 paper：paper_summarize（run 內 memoized）→ note_save(meta) → {persisted: true}
 </code></pre>
 <h3 id="42b-worked-example-when-the-critic-actually-fires">4.2b Worked example — when the Critic actually fires</h3>
 <p>實際跑 <code>"Survey robotics VLA models in 2024-2026"</code>（offline backend）：</p>
@@ -264,7 +210,7 @@ for sub_topic, papers in assign.items():
 <ol>
 <li><strong>Planner prompt</strong>："分解 user query 為 sub-topics、產生 DAG"。輸出格式 enforced via JSON schema。</li>
 <li><strong>Reasoner prompt</strong>：ReAct 形式（<code>Thought / Action / Observation</code>），每輪只允許單一 action。</li>
-<li><strong>Critic</strong>：刻意設計成 <strong>binary coverage check</strong>（「某 sub-topic 去重後是否 &lt; 1 篇？」），而非開放式「還能更好嗎」——後者會讓 LLM 永遠想再搜、陷入 perfectionist loop。並設 <code>max_critic_rounds=1</code> 硬上限。</li>
+<li><strong>Critic</strong>：刻意設計成 <strong>binary coverage check</strong>（「某 sub-topic 去重後是否 &lt; 1 篇？」）而非開放式「還能更好嗎」。這是踩坑後的修正——初版用「列出所有可改進角度」的 prompt，LLM 永遠列得出更多、跑了 8 輪、token 翻倍；換成量化門檻 + <code>max_critic_rounds=1</code> 硬上限後，loop 收斂且可預測。<strong>Critic 該回 yes/no，不是「想想還能更好嗎」。</strong></li>
 <li><strong>Compiler</strong>：輸入<strong>只有 note store</strong>（每則 note 的結構化 <code>meta</code>）+ <code>citation_format</code> 輸出；不接受任何不在 store 內的 paper。這把 LLM 幻覺擋在系統邊界外。</li>
 </ol>
 <p>每個 prompt 都明確 enforce 輸出格式，避免 free-form 漂移。Tool call schema 用 Anthropic / OpenAI 的 function calling spec 表達，並由 <code>dispatch_tool</code> 在每次執行前<strong>實際驗證</strong>（§3.6），不是只寫在文件上。</p>
@@ -429,6 +375,7 @@ for sub_topic, papers in assign.items():
 <li>拿掉 <strong>Critic</strong>：papers 6→5、F1 1.00→0.91 —— 因為 dedup 清空 <code>Diffusion Policy</code> 後，沒有 critic 就永遠補不回 seminal 那篇。<strong>這就是 critic loop 的量化貢獻。</strong></li>
 <li>拿掉 <strong>Planner</strong>：3 個 sub-topic 塌成 1、F1 1.00→0.80 —— 單一 ReAct loop 無法覆蓋分解 plan 的廣度。</li>
 </ul>
+<p>把每個 phase 的貢獻量化出來：<strong>Planner 撐起廣度（+0.20 F1）、Critic 補回被 dedup 清空的 seminal paper（+0.09 F1）</strong>。這就是為什麼 orchestration 不是裝飾，而是 coverage 的直接來源——也呼應 §4 的設計：複雜度該由階段化吸收。</p>
 <h3 id="54-rubric">5.4 質性指標（rubric）</h3>
 <p>5 點 Likert（1=很差，5=很好），3 位 evaluator 平均，目標 ≥ 4/5：Helpfulness / Accuracy / Completeness / Clarity / Novelty（是否提出 cross-paper synthesis）。</p>
 <h3 id="55-mode">5.5 失敗 mode 與防護（已落實於程式）</h3>
@@ -475,19 +422,7 @@ for sub_topic, papers in assign.items():
 </table>
 <hr />
 <h2 id="6-implementation-demoaccompanying-mvp">6. Implementation &amp; Demo（accompanying MVP）</h2>
-<p>詳見 <code>code/</code>：
-- <code>code/tools.py</code> — 4 個工具的實作（offline corpus + 可選真實 arXiv API）
-- <code>code/harness_demo.py</code> — Plan / Execute(+dedup) / Critic / Compile 四段 controller
-- <code>code/eval.py</code> — 跑 3 個 fixed query + ablation，產出 <a href="../artifacts/eval_results.md"><code>artifacts/eval_results.md</code></a> 的實測數字
-- <code>code/test_harness.py</code> — 20 個 pytest（工具單元 + schema-validated dispatch 守衛 + pipeline 不變量：無重複、引用都真實、critic 確實觸發、offline 決定性）
-- <code>artifacts/demo_run.md</code> — 一次完整的 demo trace（query：「Survey robotics VLA models 2024-2026」）</p>
-<p><strong>MVP scope</strong>（刻意保持小）：</p>
-<ul>
-<li>~560 行的 4-phase orchestrator（<code>harness_demo.py</code>）+ ~650 行工具層（<code>tools.py</code>：15 篇 corpus、JSON schema、validated dispatch）；</li>
-<li>兩個 LLM backend：Claude（API key 可選）/ offline deterministic planner（CI-safe）；</li>
-<li>一個 query 端到端產出 6 篇、無重複的 mini-survey + IEEE 引用，<strong>22 tool calls / 100% 效率 / critic 觸發 1 輪 / 0.04 s</strong>，完全可離線重現；</li>
-<li><code>python -m pytest code/test_harness.py</code> → <strong>20 passed</strong>。</li>
-</ul>
+<p>完整 MVP 在 <code>code/</code>：~560 行 4-phase orchestrator（<code>harness_demo.py</code>）+ ~650 行工具層（<code>tools.py</code>：15 篇 corpus、JSON schema、validated dispatch）+ <code>eval.py</code>（實測）+ <code>test_harness.py</code>（<strong>20 passed</strong>）。兩個 backend：Claude（API key 可選）/ offline deterministic（CI-safe、可重現）。一個 query 端到端產出 6 篇無重複 mini-survey + IEEE 引用（<strong>22 tool calls / 100% 效率 / critic 1 輪 / 0.04 s</strong>），完整 trace 見 <a href="../artifacts/demo_run.md"><code>artifacts/demo_run.md</code></a>。</p>
 <hr />
 <h2 id="7-conclusion">7. Conclusion</h2>
 <p>本 AI Harness 設計用 <strong>「LLM as controller + 4 個專責工具 + 雙層 memory + 4-phase orchestration」</strong> 的架構解決「研究生做 DRL 文獻綜述」的具體問題。三個設計重點：</p>
@@ -496,7 +431,7 @@ for sub_topic, papers in assign.items():
 <li><strong>Orchestration 用 plan→execute→critic→compile 四段</strong> 而非單一 ReAct loop，讓系統能處理需要 cross-paper synthesis 的複雜任務。</li>
 <li><strong>Evaluation 同時量化（coverage / accuracy / cost）與質化（rubric）</strong>，並設計 ablation 區隔每個元件的貢獻。</li>
 </ol>
-<p>更廣的 lesson：<strong>「AI Harness 的競爭力不在 LLM 多強，而在 system design 多嚴謹」</strong>——這也是 Anthropic MCP、OpenAI Operator、Claude Code 等業界系統共同的方法論。</p>
+<p>更廣的 lesson：<strong>AI Harness 的競爭力不在 LLM 多強，而在「邊界」畫得多嚴謹</strong>——這正是業界三條主線各自印證的：<strong>MCP</strong> 把工具標準化成 schema 化的外部 capability、<strong>ReAct</strong> 把推理與行動交錯成可逐步檢查的 trace、<strong>Claude Code</strong> 用單線程 controller + 工具邊界來吸收複雜度。本系統把這三者收斂成一個可離線重現、可量測的最小實作；也因此換 Claude / GPT / Llama 都不影響整體 design——<strong>LLM 反而是系統裡最 commoditized 的部分</strong>。</p>
 <hr />
 <p>\textit{See <code>../../AI_CHAT/log.md</code> for the AI-assisted iterative design process; see <code>infographic/architecture.html</code> for the full visual system diagram.}</p>
 </body>

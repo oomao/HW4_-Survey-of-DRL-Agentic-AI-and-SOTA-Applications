@@ -40,7 +40,7 @@ h1 { font-size: 1.9em; margin-top: 1.4em; border-bottom: 2px solid var(--accent)
 h2 { font-size: 1.35em; margin-top: 1.8em; color: var(--accent); }
 h3 { font-size: 1.1em; margin-top: 1.4em; }
 h4 { font-size: 1.0em; margin-top: 1.2em; color: var(--muted); }
-p, li { text-align: justify; }
+p, li { text-align: left; }
 ul, ol { padding-left: 1.4em; }
 strong { color: #0c4a6e; }
 code {

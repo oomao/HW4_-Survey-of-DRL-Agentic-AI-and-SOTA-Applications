@@ -53,6 +53,13 @@
 
 從 Downloads 用 md5 比對找出兩張不重複的圖、視覺辨識 A/B，複製進 `A_DRL_Survey/infographic/survey_infographic.png`、`B_AI_Harness/infographic/architecture.png`（與既有 html/pdf 並排）；README 嵌入、B §8 評分證據改指新 PNG。核對圖中數字（F1 0.74 / 100% / ablation 1.00·0.91·0.80）與實測一致。
 
+## 🧑 User — 圖表最終配置、移除舊圖、subagent 驗證後 push
+
+- **配置**（user 兩次澄清）：**harness 圖**放在**根 README + B_AI_Harness README 的最上面**（標題下第一個元素）；**survey 圖**只放在 **A_DRL_Survey 自己的 README**；移除根 README 舊的 `overview.svg` 嵌入（檔案留 `docs/`、不再顯示）。
+- **交付前驗證**：依 user 要求派一個 verification subagent 跑 7 項只讀檢查 → **GO**：圖片連結全解析、log.md 搬遷無斷鏈、`pytest 20`、demo `22 calls / critic 1`、`eval F1 0.74` 不 crash、report `5 頁`、數字一致（20/15/16）、推送歷史無 Claude 署名。
+- **push**：clean fast-forward 上 GitHub，遠端 0 個 `Co-Authored-By`。
+- **評分對應釐清**：五項標準各自呈現位置 —— 系統設計 35%→`report §2`/`§3.6`+infographic；Tool/Orchestration 25%→`§3`/`§4`+`code/`+20 tests；Workflow 20%→`§4`+pipeline 面板；Infographic 10%→`architecture.png`；log.md 10%→`AI_CHAT/log.md`。
+
 ## 設計決策總表（本場）
 
 | # | 決策 | 為何 |
@@ -62,12 +69,15 @@
 | 3 | log.md 併入 AI_CHAT（以 AI_CHAT 為主），但保留實體 `log.md` | 守住「log.md 設計過程 10%」、又消除重複 |
 | 4 | commit 全歷史去 Claude 署名（force-push 經授權） | git log 乾淨、無 AI 痕跡；技術引用照留 |
 | 5 | 兩張一頁式 infographic 入庫並嵌 README | 視覺 deliverable 升級、GitHub 直接可見 |
+| 6 | harness 圖放根+B README 最上面、survey 只放 A README、移除舊 overview.svg | user 指定的配置；harness 為主視覺 |
+| 7 | 交付前派 subagent 做 7 項只讀驗證，GO 才 push | 獨立檢查，不靠自己「應該沒問題」 |
 
 ## 成果
 
 - **B 報告**從「骨架」變「論證」：6 處加深、3 個壞清單修好、justify 改靠左，仍 5 頁合規。
 - **設計過程紀錄整合**：`log.md` 進 `AI_CHAT/`，全 repo 指路標一致。
 - **git**：GitHub 全歷史無 Claude 署名；偏好已記入記憶。
-- **兩專案各一張精緻一頁式資訊圖表**（數字與實測一致）。
+- **兩專案各一張精緻一頁式資訊圖表**（數字與實測一致）：harness 圖在**根 + B README 最上面**、survey 圖在 **A README**，舊 `overview.svg` 已從 README 移除。
+- **交付前驗證**：subagent 7 項只讀檢查全 **GO**，clean fast-forward push 上 GitHub（遠端無 Claude 署名）。
 
-> 一以貫之的 lesson：先確認「**真正的問題是什麼**」再動手（壞清單 ≠ 內容淺），且每個宣稱都對得起 code 與實測。
+> 一以貫之的 lesson：先確認「**真正的問題是什麼**」再動手（壞清單 ≠ 內容淺），且每個宣稱都對得起 code 與實測；交付前用獨立 subagent 驗證、不靠自己「應該沒問題」。

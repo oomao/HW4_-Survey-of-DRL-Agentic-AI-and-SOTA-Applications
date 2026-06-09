@@ -73,10 +73,10 @@
 <header>
   <span class="tag">HW4 Version B · AI Harness Infographic</span>
   <h1>DRL Research Assistant — System Design at a Glance</h1>
-  <div class="sub">LLM Controller · 4 Function-Calling Tools · 2-layer Memory · 4-phase Orchestration</div>
+  <div class="sub">LLM Controller · 4 Function-Calling Tools (schema-validated) · 2-layer Memory · 4-phase Orchestration</div>
   <div class="sub" style="margin-top:0.35rem;">
     <span style="background:#dcfce7;color:#15803d;border-radius:999px;padding:2px 10px;font-weight:600;">measured offline:</span>
-    Coverage F1 <strong>0.74</strong> macro · citation accuracy <strong>100%</strong> · tool efficiency <strong>100%</strong> · <strong>0</strong> duplicate papers · <strong>15</strong>/15 tests pass
+    Coverage F1 <strong>0.74</strong> macro · citation accuracy <strong>100%</strong> · tool efficiency <strong>100%</strong> · <strong>0</strong> duplicate papers · <strong>20</strong>/20 tests pass
   </div>
 </header>
 
@@ -478,6 +478,7 @@
     <tbody>
       <tr><td>LLM hallucinates arxiv_id</td><td>Reasoner phase</td><td><code>paper_summarize</code> returns explicit error; Compiler discards.</td></tr>
       <tr><td>Tool-call infinite loop</td><td>ReAct loop</td><td><code>max_steps</code> hard cap; force fallback to Compile.</td></tr>
+      <tr><td>Malformed / unknown tool call</td><td>Tool dispatch boundary</td><td>Schema-validated <code>dispatch_tool</code> rejects unknown tool, missing field, or out-of-enum value before any tool runs.</td></tr>
       <tr><td>LLM fakes a note without calling <code>note_save</code></td><td>Reasoner phase</td><td>Compiler rebuilds the report purely from each note's persisted <code>meta</code> — no in-context facts (verified: citation accuracy 100%).</td></tr>
       <tr><td>Same paper appears under many sub-topics</td><td>Execute phase</td><td>Cross-topic dedup assigns each paper to its single best-fit sub-topic before summarizing (verified: 0 duplicates).</td></tr>
       <tr><td>Sub-topic emptied / weak coverage</td><td>Critic phase</td><td>Binary coverage check → broaden year range and re-search (≤ 1 round); recovered Diffusion Policy in demo.</td></tr>

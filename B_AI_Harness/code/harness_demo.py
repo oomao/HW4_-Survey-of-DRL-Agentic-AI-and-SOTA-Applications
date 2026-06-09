@@ -34,14 +34,11 @@ from pathlib import Path
 from typing import Any
 
 from tools import (
-    arxiv_search,
     search_scored,
-    paper_summarize,
-    citation_format,
-    note_save,
+    dispatch_tool,
+    validate_tool_call,
     get_note_store,
     reset_note_store,
-    TOOL_REGISTRY,
 )
 
 HERE = Path(__file__).resolve().parent
@@ -89,7 +86,7 @@ class HarnessRun:
             self.log("EXECUTE", "observation",
                      f"(memoized) reused cached summary for {arxiv_id}")
             return self.summary_cache[arxiv_id]
-        s = paper_summarize(arxiv_id)
+        s = dispatch_tool("paper_summarize", {"arxiv_id": arxiv_id})
         self.tool_calls += 1
         if "error" not in s:
             self.useful_tool_calls += 1
@@ -196,7 +193,10 @@ def search_subtopic(
             f"Thought: I need to gather recent papers on '{sub_topic}'.")
     run.log("EXECUTE", "action",
             f"arxiv_search(query={search_query!r}, year_min={year_min}, year_max=2026, max_results={max_results})")
-    scored = search_scored(search_query, year_min=year_min, year_max=2026, max_results=max_results)
+    call_args = {"query": search_query, "year_min": year_min,
+                 "year_max": 2026, "max_results": max_results}
+    validate_tool_call("arxiv_search", call_args)   # schema-check the public tool call ...
+    scored = search_scored(**call_args)             # ... then use its scored internal twin for dedup
     run.tool_calls += 1
     run.useful_tool_calls += 1
     run.log("EXECUTE", "observation",
@@ -259,7 +259,8 @@ def summarize_and_store(
                 ("arxiv_id", "title", "authors", "year", "venue",
                  "key_contribution", "methods", "results", "limitations")}
         meta["sub_topic"] = sub_topic
-        ack = note_save(sub_topic, body, tags=[sub_topic], meta=meta)
+        ack = dispatch_tool("note_save", {"topic": sub_topic, "content": body,
+                                          "tags": [sub_topic], "meta": meta})
         run.tool_calls += 1
         run.useful_tool_calls += 1
         run.log("EXECUTE", "action",
@@ -399,7 +400,7 @@ def compile_report(
             if p["arxiv_id"] in seen:
                 continue
             seen.add(p["arxiv_id"])
-            refs.append(f"[{len(refs)+1}] " + citation_format(p, style="IEEE"))
+            refs.append(f"[{len(refs)+1}] " + dispatch_tool("citation_format", {"paper": p, "style": "IEEE"}))
             run.tool_calls += 1
             run.useful_tool_calls += 1
     references = "\n\n".join(refs)
@@ -525,6 +526,12 @@ def render_transcript(run: HarnessRun) -> str:
 
 
 def main() -> None:
+    # Force UTF-8 stdout so the em-dash / arrow glyphs in the compiled report
+    # print cleanly on cp950/cp1252 Windows consoles instead of mojibake.
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
     query = " ".join(sys.argv[1:]) or "Survey robotics VLA models in 2024-2026"
     print(f"[harness] running query: {query}\n")
     run = run_harness(query)

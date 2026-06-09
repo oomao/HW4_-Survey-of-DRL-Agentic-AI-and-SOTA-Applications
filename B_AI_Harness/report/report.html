@@ -130,9 +130,9 @@ a:hover { text-decoration: underline; }
 <ol>
 <li><strong>LLM Controller</strong> — 四個 sub-role 共用同一個 model（Claude Haiku 4.5），透過不同 system prompt 切換角色，無需多個 model instance。</li>
 <li><strong>Memory</strong> — 雙層：
-   - <em>Short-term</em>：當輪對話 history，用 LLM 原生 context window。
-   - <em>Long-term</em>：JSON-backed note store（per-topic）+ citation DB（per-paper），跨輪持久化。</li>
-<li><strong>Tools</strong> — 4 個 function-callable APIs，每個都有 strict JSON schema。</li>
+   - <em>Short-term</em>：當輪對話 history（LLM context window）+ within-run 的 summary memoization cache（同一篇 paper 不重複 summarize，是 tool 效率 100% 的來源）。
+   - <em>Long-term</em>：JSON-backed note store（per-topic，每則 note 附結構化 <code>meta</code>），跨輪持久化，且是 Compiler <strong>唯一</strong>的 source of truth。</li>
+<li><strong>Tools</strong> — 4 個 function-callable APIs，每個都有 strict JSON schema；所有呼叫都先經 schema-validated dispatch（§3.6）驗證才執行。</li>
 </ol>
 <hr />
 <h2 id="3-tool-design3-4">3. Tool Design（≥3，本系統 4 個）</h2>
@@ -194,6 +194,16 @@ a:hover { text-decoration: underline; }
 </tr>
 </tbody>
 </table>
+<h3 id="36-schema-validated-dispatch">3.6 工具呼叫的邊界守衛（schema-validated dispatch）</h3>
+<p>四個工具不是被直接呼叫，而是統一經過 <code>dispatch_tool(name, input)</code>：先用該工具的 <code>TOOL_SCHEMAS</code> 驗證（工具存在、<code>required</code> 欄位齊、型別正確、<code>style</code> 在 enum 內），通過才路由到 <code>TOOL_REGISTRY</code> 的實作。這把「function-callable + strict schema」從文件變成 <strong>runtime 事實</strong>，也是三道 guardrail 的落點：</p>
+<ul>
+<li><strong>格式守衛</strong>：malformed / unknown tool call 在 dispatch 邊界被 <code>ToolValidationError</code> 擋下，不會帶壞參數進到工具。</li>
+<li><strong>寫入範圍守衛</strong>：唯一有副作用的 <code>note_save</code> 只能寫 <code>artifacts/notes.json</code>；系統不把任意檔案路徑或程式執行暴露給 LLM。</li>
+<li><strong>不信任內容守衛</strong>：arXiv abstract / summary 一律當 <strong>data</strong>（不 eval、不當指令），Compiler 只取結構化 <code>meta</code>——把 prompt-injection-via-paper-content 擋在系統邊界外。</li>
+</ul>
+<blockquote>
+<p>「schema 驗證」與「工具自身的 runtime 失敗」是兩層：前者是 controller 違約（raise），後者是工具回結構化 error dict（如未知 arxiv_id）。兩者都有測試守住。</p>
+</blockquote>
 <hr />
 <h2 id="4-workflow-agent-orchestration">4. Workflow / Agent Orchestration</h2>
 <h3 id="41-pipeline">4.1 四階段 pipeline</h3>
@@ -257,7 +267,7 @@ for sub_topic, papers in assign.items():
 <li><strong>Critic</strong>：刻意設計成 <strong>binary coverage check</strong>（「某 sub-topic 去重後是否 &lt; 1 篇？」），而非開放式「還能更好嗎」——後者會讓 LLM 永遠想再搜、陷入 perfectionist loop。並設 <code>max_critic_rounds=1</code> 硬上限。</li>
 <li><strong>Compiler</strong>：輸入<strong>只有 note store</strong>（每則 note 的結構化 <code>meta</code>）+ <code>citation_format</code> 輸出；不接受任何不在 store 內的 paper。這把 LLM 幻覺擋在系統邊界外。</li>
 </ol>
-<p>每個 prompt 都明確 enforce 輸出格式，避免 free-form 漂移。Tool call schema 用 Anthropic / OpenAI 的 function calling spec 表達。</p>
+<p>每個 prompt 都明確 enforce 輸出格式，避免 free-form 漂移。Tool call schema 用 Anthropic / OpenAI 的 function calling spec 表達，並由 <code>dispatch_tool</code> 在每次執行前<strong>實際驗證</strong>（§3.6），不是只寫在文件上。</p>
 <hr />
 <h2 id="5-evaluation-framework">5. Evaluation Framework</h2>
 <h3 id="51">5.1 量化指標（定義與目標）</h3>
@@ -452,6 +462,11 @@ for sub_topic, papers in assign.items():
 <td><code>harness_demo.critic_review</code></td>
 </tr>
 <tr>
+<td>Malformed / unknown tool call</td>
+<td>dispatch 前先 schema 驗證，違規 raise <code>ToolValidationError</code>（§3.6）</td>
+<td><code>tools.validate_tool_call</code></td>
+</tr>
+<tr>
 <td>網路 / API failure</td>
 <td>offline cached corpus fallback</td>
 <td><code>tools.arxiv_search</code></td>
@@ -464,14 +479,14 @@ for sub_topic, papers in assign.items():
 - <code>code/tools.py</code> — 4 個工具的實作（offline corpus + 可選真實 arXiv API）
 - <code>code/harness_demo.py</code> — Plan / Execute(+dedup) / Critic / Compile 四段 controller
 - <code>code/eval.py</code> — 跑 3 個 fixed query + ablation，產出 <a href="../artifacts/eval_results.md"><code>artifacts/eval_results.md</code></a> 的實測數字
-- <code>code/test_harness.py</code> — 15 個 pytest（工具單元 + pipeline 不變量：無重複、引用都真實、critic 確實觸發、offline 決定性）
+- <code>code/test_harness.py</code> — 20 個 pytest（工具單元 + schema-validated dispatch 守衛 + pipeline 不變量：無重複、引用都真實、critic 確實觸發、offline 決定性）
 - <code>artifacts/demo_run.md</code> — 一次完整的 demo trace（query：「Survey robotics VLA models 2024-2026」）</p>
 <p><strong>MVP scope</strong>（刻意保持小）：</p>
 <ul>
-<li>~450 行 Python 完整實作 4-phase pipeline；</li>
+<li>~560 行的 4-phase orchestrator（<code>harness_demo.py</code>）+ ~650 行工具層（<code>tools.py</code>：15 篇 corpus、JSON schema、validated dispatch）；</li>
 <li>兩個 LLM backend：Claude（API key 可選）/ offline deterministic planner（CI-safe）；</li>
 <li>一個 query 端到端產出 6 篇、無重複的 mini-survey + IEEE 引用，<strong>22 tool calls / 100% 效率 / critic 觸發 1 輪 / 0.04 s</strong>，完全可離線重現；</li>
-<li><code>python -m pytest code/test_harness.py</code> → <strong>15 passed</strong>。</li>
+<li><code>python -m pytest code/test_harness.py</code> → <strong>20 passed</strong>。</li>
 </ul>
 <hr />
 <h2 id="7-conclusion">7. Conclusion</h2>
@@ -483,6 +498,6 @@ for sub_topic, papers in assign.items():
 </ol>
 <p>更廣的 lesson：<strong>「AI Harness 的競爭力不在 LLM 多強，而在 system design 多嚴謹」</strong>——這也是 Anthropic MCP、OpenAI Operator、Claude Code 等業界系統共同的方法論。</p>
 <hr />
-<p>\textit{See <code>log.md</code> for the AI-assisted iterative design process; see <code>infographic/architecture.html</code> for the full visual system diagram.}</p>
+<p>\textit{See <code>../../AI_CHAT/log.md</code> for the AI-assisted iterative design process; see <code>infographic/architecture.html</code> for the full visual system diagram.}</p>
 </body>
 </html>

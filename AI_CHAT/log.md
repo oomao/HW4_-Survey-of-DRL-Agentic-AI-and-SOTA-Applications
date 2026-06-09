@@ -1,7 +1,8 @@
-# `log.md` — AI-Assisted Design Process
+# `log.md` — AI-Assisted Design Process（決策濃縮）
 
-> 紀錄 Version B（AI Harness Systems Design）的迭代設計過程：與 AI 的對話、架構調整、設計決策、踩過的坑與修正。
-> 全文按時間軸（chronological）整理，每個 step 都標時間戳。
+> 本檔位於 `AI_CHAT/`（HW4 設計過程的主要紀錄），是 Version B（AI Harness Systems Design）設計過程的**決策濃縮**：迭代、架構調整、設計決策、踩過的坑與修正，按時間軸整理。
+>
+> 同資料夾的 [`session_01`](session_01_drl_survey_main.md)–[`session_05`](session_05_rubric_maximization.md) 是對應的**真實 AI 協作對話**（逐字 + curated）。兩者是同一份過程的兩個視角 —— **session_\*.md 是過程證據，本 log 是決策結論**。系統本體見 [`../B_AI_Harness/`](../B_AI_Harness/)。
 
 ---
 
@@ -204,8 +205,8 @@ helpfulness · accuracy · completeness · clarity · novelty
 
 **首次端到端跑：** `python code/harness_demo.py`
 
-**問題 1：** Output 文字裡的中文破折號（—）在 Windows console 變亂碼。
-**修正：** 換成 ASCII 破折號（`-`）；artifact 檔案保留中文。
+**問題 1：** Output 文字裡的破折號（—）/ `≥` / `→` 在 Windows cp950 console 變亂碼，`eval.py` 甚至直接 `UnicodeEncodeError` crash。
+**修正：** 在兩個 entry point（`harness_demo.py` / `eval.py`）的 `main()` 開頭做 `sys.stdout.reconfigure(encoding="utf-8")` —— console 與 artifact 都保留完整 Unicode，不必為了遷就 console 而把報告降級成 ASCII。
 
 **問題 2：** Diffusion Policy paper（2023 RSS）落在 `year_min=2024` 之外，所以 sub-topic 'Diffusion Policy' 搜不到本尊。
 **選擇 fix or document：** **選 document**，理由：
@@ -285,9 +286,27 @@ helpfulness · accuracy · completeness · clarity · novelty
 
 - 4 工具單元測試（含 `paper_summarize` 未知 ID 回 error 不 raise、`citation_format` 四種 style、年份過濾把 Diffusion Policy 擋掉再放回）。
 - pipeline 不變量：**無重複 paper**、**每條引用 ID 都在 corpus**（anti-hallucination）、**Critic 確實觸發並撈回 seminal 那篇**、**−Critic 時撈不回**、**offline 決定性**。
-- `python -m pytest code/test_harness.py` → **15 passed in 0.25s**。
+- `python -m pytest code/test_harness.py` → **15 passed**（後於 Iteration 15 擴到 20）。
 
 **Lesson：** 「Compiler 不接受幻覺」這種宣稱，與其在 report 寫一段話，不如寫一個 `assert all(pid in CORPUS_IDS ...)` 的測試——它會在 CI 永遠守著。
+
+---
+
+## Iteration 15 — 把 function-calling 從文件變成 runtime 事實 + 安全守衛
+
+交付前再對著評分標準自審（**系統設計 35% + Tool/Orchestration 25% 占 60% 權重**），抓到一個 **report 漂亮、code 沒做實**的破口：
+
+- `TOOL_SCHEMAS` / `TOOL_REGISTRY` 是**死碼** —— schema 只被 README「指著說它存在」，LLM 從沒真的 function-call，工具全是 Python 直接呼叫。「function-callable tools with strict schema」這個核心賣點只活在文字裡。
+
+**修正（同 Iteration 12 原則：補 code 去符合宣稱，不弱化宣稱）：**
+
+- `tools.py` 新增 `validate_tool_call()` + `dispatch_tool()`：每次工具呼叫都先用該工具的 `TOOL_SCHEMAS` 驗證（工具存在、`required` 齊、型別對、`style` 在 enum 內）才路由到 `TOOL_REGISTRY`。死碼變活碼、每次 run 都被執行。
+- `harness_demo.py` executor 全改走 dispatch（`paper_summarize` / `note_save` / `citation_format`）+ search 路徑 `validate_tool_call("arxiv_search", …)`。**呼叫次數語義不變 → 22 tool calls / macro F1 0.74 / ablation 1.00·0.91·0.80 全部不動。**
+- 補 **5 個 pytest（15→20）**：dispatch 執行、未知工具 raise、缺 required raise、enum 違規 raise、且把「schema 驗證 raise」與「工具 runtime 回 error dict」兩層分清楚。
+
+**順帶補 Safety / Guardrails（撐起「系統設計完整性」）：** report 新增 §3.6，三道守衛寫清楚 —— 格式守衛（malformed call 在 dispatch 邊界 `ToolValidationError` 擋下）、寫入範圍守衛（只能寫 `notes.json`、不暴露任意路徑/程式執行）、不信任內容守衛（paper 內容當 data、不當指令 → 擋 prompt-injection-via-paper-content）。infographic 副標題加「schema-validated」、failure-map 加一列。
+
+**Lesson：** 連「我們已經 function-calling 了」這種 meta 宣稱也要在 code 裡為真 —— 評分標準把「邏輯一致性與可解釋性」放最前面，schema 是不是死碼，助教讀 code 一眼就知道。
 
 ---
 
@@ -309,7 +328,8 @@ helpfulness · accuracy · completeness · clarity · novelty
 | 12 | Compiler 真的從 note store `meta` 重建 | 讀記憶體 dict | 讓「幻覺防護」是 code 事實而非口號 |
 | 13 | summarize 前 cross-topic dedup（依 score） | references 才 dedup | 同篇 paper 不重複出現 / 不重複 summarize |
 | 14 | Critic 用 coverage gap 觸發 broadened re-search | 永遠 coverage OK | loopback 真的會跑、且能撈回 pre-2024 seminal |
-| 15 | eval.py 實測 + 15 pytest | 只寫 evaluation 計畫 | 數字可重現、不變量被守住 |
+| 15 | eval.py 實測 + 20 pytest | 只寫 evaluation 計畫 | 數字可重現、不變量被守住 |
+| 16 | 工具呼叫走 schema-validated dispatch（死碼變活碼）+ 三道 guardrail | schema 只寫在文件 | 讓「function-callable / strict schema」是 runtime 事實、被測試守住 |
 
 ---
 
@@ -324,7 +344,7 @@ helpfulness · accuracy · completeness · clarity · novelty
 5. **Web UI**：包成 FastAPI + 簡單前端，讓非 CLI user 也能用。
 6. **Cost tracker**：把 token cost 即時顯示給 user（提升透明度）。
 
-> ✅ 已完成（原本列為 future）：cross-topic dedup、Compiler 從 store 重建、Critic loopback 實際觸發、eval harness + ablation 實測、pytest 不變量測試 —— 見 Iteration 12–14。
+> ✅ 已完成（原本列為 future）：cross-topic dedup、Compiler 從 store 重建、Critic loopback 實際觸發、eval harness + ablation 實測、pytest 不變量測試、schema-validated dispatch + guardrails —— 見 Iteration 12–15。
 
 ---
 

@@ -70,9 +70,9 @@ topic                  抓 contribution
 - 🖼 **Architecture infographic** — 6-panel SVG → [`B_AI_Harness/infographic/architecture.html`](B_AI_Harness/infographic/architecture.html)
 - 🎞 **Presentation** — 14 張 → [`B_AI_Harness/slides/slides.md`](B_AI_Harness/slides/slides.md)
 - ⚙ **Working MVP** — 6 papers (deduped) / 22 tool calls / 100% efficiency / 0.04 s（offline 可跑） → [`B_AI_Harness/code/harness_demo.py`](B_AI_Harness/code/harness_demo.py)
-- 📜 **log.md** — 14 次設計 iteration + 15 條 decision table → [`B_AI_Harness/log.md`](B_AI_Harness/log.md)
+- 📜 **log.md** — 15 次設計 iteration + 16 條 decision table → [`AI_CHAT/log.md`](AI_CHAT/log.md)（與 AI 對話 session 同放 `AI_CHAT/`）
 - 📊 **Evaluation（實測）** — macro F1 0.74 / citation 100% / 效率 100% + 3-config ablation → [`B_AI_Harness/artifacts/eval_results.md`](B_AI_Harness/artifacts/eval_results.md)
-- ✅ **Tests** — 15 pytest（pipeline 不變量）→ [`B_AI_Harness/code/test_harness.py`](B_AI_Harness/code/test_harness.py)
+- ✅ **Tests** — 20 pytest（schema-validated dispatch 守衛 + pipeline 不變量）→ [`B_AI_Harness/code/test_harness.py`](B_AI_Harness/code/test_harness.py)
 - 💾 **Persisted notes** — long-term memory 樣本 → [`B_AI_Harness/artifacts/notes.json`](B_AI_Harness/artifacts/notes.json)
 
 ---

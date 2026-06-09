@@ -18,6 +18,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import tools
@@ -29,6 +31,9 @@ from tools import (
     note_save,
     reset_note_store,
     get_note_store,
+    dispatch_tool,
+    validate_tool_call,
+    ToolValidationError,
     CORPUS,
 )
 from harness_demo import run_harness
@@ -120,6 +125,40 @@ def test_note_save_empty_topic_rejected():
     ack = note_save("   ", "content")
     assert ack["persisted"] is False
     assert "error" in ack
+
+
+# --------------------------------------------------------------------------
+# Schema-validated dispatch (the function-calling boundary guard)
+# --------------------------------------------------------------------------
+
+def test_dispatch_tool_executes_valid_call():
+    # A schema-valid call is routed through TOOL_REGISTRY and returns the result.
+    s = dispatch_tool("paper_summarize", {"arxiv_id": "2406.09246"})
+    assert s["title"].startswith("OpenVLA")
+
+
+def test_validate_rejects_unknown_tool():
+    with pytest.raises(ToolValidationError):
+        validate_tool_call("delete_everything", {"path": "/"})
+
+
+def test_validate_rejects_missing_required_field():
+    # note_save requires both topic and content; omitting content must fail.
+    with pytest.raises(ToolValidationError):
+        validate_tool_call("note_save", {"topic": "t"})
+
+
+def test_validate_rejects_out_of_enum_style():
+    # citation_format.style is constrained to IEEE/ACM/APA/BibTeX.
+    with pytest.raises(ToolValidationError):
+        validate_tool_call("citation_format", {"paper": {}, "style": "MLA"})
+
+
+def test_dispatch_preserves_tool_failsafe():
+    # A schema-valid call to a runtime-failing tool still returns the tool's
+    # structured error dict (it does NOT raise) — the two error layers are distinct.
+    out = dispatch_tool("paper_summarize", {"arxiv_id": "9999.99999"})
+    assert "error" in out and out["arxiv_id"] == "9999.99999"
 
 
 # --------------------------------------------------------------------------

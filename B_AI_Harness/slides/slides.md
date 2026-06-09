@@ -90,6 +90,7 @@ Structured Survey Report (Markdown + IEEE refs)
 | 4 | `note_save` | (topic, content, tags?, **meta?**) → ack | **寫** notes.json；disk error → `persisted:false` |
 
 > 三原則：**單一職責 · 嚴格 JSON schema · 失敗回 actionable error 而非 stack trace。**
+> 所有呼叫先經 `dispatch_tool` 依 schema 驗證才執行（**非死碼**）—— 5 個 pytest 守住「未知工具 / 缺 required / enum 違規」都被擋。
 
 ---
 
@@ -195,6 +196,7 @@ Flagship query: *"Survey robotics VLA models in 2024-2026"*
 | 假裝寫 note 沒呼叫工具 | Compiler 只讀 store 的 meta | `view_from_store` |
 | 同篇 paper 重複 | summarize 前 cross-topic dedup | `assign_papers` |
 | Critic perfectionist loop | binary check + `max_critic_rounds=1` | `critic_review` |
+| Malformed / unknown tool call | dispatch 前 schema 驗證 → `ToolValidationError` | `validate_tool_call` |
 | 網路 / API failure | offline cached corpus fallback | `arxiv_search` |
 
 ---
@@ -204,7 +206,7 @@ Flagship query: *"Survey robotics VLA models in 2024-2026"*
 ```bash
 python code/harness_demo.py     # 端到端
 python code/eval.py             # evaluation + ablation
-python -m pytest code/test_harness.py   # → 15 passed
+python -m pytest code/test_harness.py   # → 20 passed
 ```
 
 **預設 query 一次跑完：**
@@ -237,6 +239,6 @@ Thanks for listening!
 **Infographic：** [`infographic/architecture.html`](../infographic/architecture.html)
 **書面報告（≤5 頁）：** [`report/report.html`](../report/report.html) · [PDF](../report/report.pdf)
 **Code：** [`code/harness_demo.py`](../code/harness_demo.py) · [`code/tools.py`](../code/tools.py) · [`code/eval.py`](../code/eval.py)
-**設計過程：** [`log.md`](../log.md)（14 iterations）
+**設計過程：** [`log.md`](../../AI_CHAT/log.md)（15 iterations · 在 AI_CHAT/）
 
-<span class="small">offline 完全可重現 · 15 tests green · macro F1 0.74 · citation accuracy 100%</span>
+<span class="small">offline 完全可重現 · 20 tests green · macro F1 0.74 · citation accuracy 100%</span>

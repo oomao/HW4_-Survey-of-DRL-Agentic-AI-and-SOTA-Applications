@@ -6,7 +6,7 @@
 **Live infographic：** [`infographic/architecture.html`](infographic/architecture.html) · [PDF](infographic/architecture.pdf)
 **完整書面報告（≤5 頁）：** [HTML](report/report.html) · [PDF](report/report.pdf) · [Markdown 原稿](report/report.md)
 **簡報（14 張）：** [`slides/slides.md`](slides/slides.md)
-**設計過程紀錄：** [`log.md`](log.md)
+**設計過程紀錄：** [`../AI_CHAT/log.md`](../AI_CHAT/log.md)（與 AI 對話 session 同放 `AI_CHAT/`）
 **Live demo 入口：** [`docs/index.html`](docs/index.html)
 
 ---
@@ -66,7 +66,7 @@ AI Harness 用 **LLM-as-controller + 外部工具 + 雙層 memory + 4-phase orch
 | 3 | `citation_format` | `(paper, style ∈ {IEEE,ACM,APA,BibTeX}) → str` | None |
 | 4 | `note_save` | `(topic, content, tags?) → {persisted, note_count, ...}` | **Write** to `artifacts/notes.json` |
 
-每個工具的 **strict JSON schema** 在 `code/tools.py` 中 `TOOL_SCHEMAS` 變數。
+每個工具的 **strict JSON schema** 在 `code/tools.py` 中 `TOOL_SCHEMAS` 變數;所有呼叫都先經 `dispatch_tool` 依 schema 驗證(工具存在 / required 齊 / 型別 / enum)才執行 — 不是死碼,每次 run 都跑、且有 5 個 pytest 守住。
 
 ---
 
@@ -92,7 +92,7 @@ PLAN  ──▶  EXECUTE (per sub-topic ReAct)  ──▶  CRITIC  ──▶  CO
 | 質性 | 5-pt Likert × 5 維度（helpfulness, accuracy, completeness, clarity, novelty） | 平均 ≥ 4/5 | rubric |
 | Ablation | full / −critic / −planner | 隔離每個 phase 的貢獻 | **F1 1.00 → 0.91 → 0.80** |
 
-> 實測數字由 `python code/eval.py` 產生，完整輸出見 [`artifacts/eval_results.md`](artifacts/eval_results.md)；15 個 pytest 守住 pipeline 不變量（`python -m pytest code/test_harness.py`）。
+> 實測數字由 `python code/eval.py` 產生，完整輸出見 [`artifacts/eval_results.md`](artifacts/eval_results.md)；20 個 pytest 守住 pipeline 不變量與 schema-validated dispatch（`python -m pytest code/test_harness.py`）。
 
 ---
 
@@ -103,7 +103,7 @@ pip install -r code/requirements.txt   # anthropic 為可選，offline 也能跑
 python code/harness_demo.py            # 跑預設 query
 python code/harness_demo.py "Survey foundation agents in 2024-2026"   # 自訂
 python code/eval.py                    # 跑 evaluation + ablation，產出實測數字
-python -m pytest code/test_harness.py  # 15 個測試（工具 + pipeline 不變量）
+python -m pytest code/test_harness.py  # 20 個測試（工具 + dispatch 守衛 + pipeline 不變量）
 ```
 
 **實際輸出：**
@@ -120,6 +120,7 @@ python -m pytest code/test_harness.py  # 15 個測試（工具 + pipeline 不變
 ```
 B_AI_Harness/
 ├── README.md                       ← 你在這
+├── VERIFY.md                       ← 快速驗證說明書（3 指令 → 對照預期輸出）
 ├── report/
 │   ├── report.md                   ← 2-5 頁書面報告（Markdown）
 │   ├── report.html                 ← HTML（瀏覽器 Print → PDF）
@@ -128,12 +129,11 @@ B_AI_Harness/
 │   └── architecture.html           ← 自含 SVG 視覺化（含 6 區塊）
 ├── slides/
 │   └── slides.md                   ← 14 張簡報（Marp-compatible）
-├── log.md                          ← AI-assisted design process（14 次 iteration）
 ├── code/
 │   ├── tools.py                    ← 4 個工具實作 + 15 篇 mini paper corpus
 │   ├── harness_demo.py             ← 4-phase orchestrator（search→dedup→critic→compile）
 │   ├── eval.py                     ← evaluation + ablation，產出實測數字
-│   ├── test_harness.py             ← 15 個 pytest（工具 + pipeline 不變量）
+│   ├── test_harness.py             ← 20 個 pytest（工具 + dispatch 守衛 + pipeline 不變量）
 │   └── requirements.txt
 ├── artifacts/                      ← demo 輸出（會被覆蓋）
 │   ├── demo_run.md
@@ -143,6 +143,8 @@ B_AI_Harness/
 └── docs/
     └── index.html                  ← Live demo 入口
 ```
+
+> 📜 **設計過程紀錄 `log.md` 與 AI 協作對話 session 一起放在 [`../AI_CHAT/`](../AI_CHAT/)**（`AI_CHAT/log.md`）—— 那是「人機協作設計過程」的單一家：對話是過程證據、log.md 是決策結論。評分對應見 §八。
 
 ---
 
@@ -154,7 +156,7 @@ B_AI_Harness/
 | **Tool / Orchestration 設計** | 25% | `report/report.md` §3-4 + `code/tools.py` + `code/harness_demo.py` |
 | **Workflow 與邏輯清晰度** | 20% | `report/report.md` §4 + `infographic/architecture.html` 區塊 2-3 |
 | **Infographic 視覺表達** | 10% | `infographic/architecture.html`（6 panel SVG） |
-| **log.md 設計過程紀錄** | 10% | `log.md`（14 次 iteration + 15 條 decision table） |
+| **log.md 設計過程紀錄** | 10% | [`../AI_CHAT/log.md`](../AI_CHAT/log.md)（15 次 iteration + 16 條 decision table；與 AI 對話 session 同放 `AI_CHAT/`） |
 
 **Bonus**：完整實作 MVP + 端到端 demo + cross-link 到 Version A，形成 narrative arc。
 

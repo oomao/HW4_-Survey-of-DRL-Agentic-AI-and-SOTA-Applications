@@ -23,6 +23,7 @@ Output:
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 from tools import CORPUS
@@ -36,7 +37,7 @@ CORPUS_IDS = {p["arxiv_id"] for p in CORPUS}
 
 
 # Expert-curated ground truth (the papers a domain expert expects per query),
-# drawn from the 16-paper corpus. Independent of what the system happens to find.
+# drawn from the 15-paper corpus. Independent of what the system happens to find.
 BENCHMARK: list[dict] = [
     {
         "query": "Survey robotics VLA models in 2024-2026",
@@ -104,6 +105,13 @@ def eval_query(query: str, truth: set[str], **kwargs) -> dict:
 
 
 def main() -> None:
+    # Some Windows consoles default to cp950/cp1252 and cannot encode the
+    # >= / em-dash / -> glyphs in the tables below; force UTF-8 so the run
+    # never crashes on print. The artifact files were always written as UTF-8.
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
     # ---- Main coverage benchmark -----------------------------------------
     rows = [eval_query(b["query"], b["ground_truth"]) for b in BENCHMARK]
     macro_f1 = sum(r["f1"] for r in rows) / len(rows)

@@ -559,6 +559,80 @@ TOOL_SCHEMAS = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# Schema-validated function-call dispatch (the tool boundary guard)
+# ---------------------------------------------------------------------------
+# The controller never calls a Python tool function directly: it emits a tool
+# *name* + a JSON *input*, which is validated against that tool's declared
+# schema (TOOL_SCHEMAS) and only then routed to the implementation
+# (TOOL_REGISTRY). This is what makes "function-callable tools with a strict
+# JSON schema" a runtime fact instead of documentation — and it is the single
+# choke point where a malformed or unknown tool call is rejected.
+
+_SCHEMA_BY_NAME: dict[str, dict] = {s["name"]: s["input_schema"] for s in TOOL_SCHEMAS}
+
+_JSON_TYPES: dict[str, type | tuple[type, ...]] = {
+    "string": str,
+    "integer": int,
+    "number": (int, float),
+    "object": dict,
+    "array": list,
+    "boolean": bool,
+}
+
+
+class ToolValidationError(ValueError):
+    """A tool call violated its declared input schema.
+
+    This is a *controller-side* contract violation (unknown tool, missing
+    required field, wrong type, out-of-enum value) — deliberately distinct
+    from a tool's own runtime failure mode, which is returned as a structured
+    error dict (e.g. an unknown arxiv_id). Schema errors raise; runtime errors
+    come back as data.
+    """
+
+
+def validate_tool_call(name: str, tool_input: dict) -> None:
+    """Validate a tool call against its declared JSON schema.
+
+    Checks, in order: the tool exists; every `required` field is present;
+    each declared field has the right primitive type; any `enum` is honoured.
+    Raises ToolValidationError on the first violation; returns None if valid.
+    Unknown extra fields are tolerated (forward-compatible).
+    """
+    if name not in _SCHEMA_BY_NAME:
+        raise ToolValidationError(
+            f"unknown tool {name!r}; known tools: {sorted(_SCHEMA_BY_NAME)}")
+    schema = _SCHEMA_BY_NAME[name]
+    props = schema.get("properties", {})
+    for field_name in schema.get("required", []):
+        if field_name not in tool_input:
+            raise ToolValidationError(f"{name}: missing required field {field_name!r}")
+    for key, val in tool_input.items():
+        spec = props.get(key)
+        if not spec:
+            continue
+        expected = _JSON_TYPES.get(spec.get("type", ""))
+        if expected is not None and not isinstance(val, expected):
+            raise ToolValidationError(
+                f"{name}.{key}: expected {spec['type']}, got {type(val).__name__}")
+        if "enum" in spec and val not in spec["enum"]:
+            raise ToolValidationError(
+                f"{name}.{key}: {val!r} not in allowed {spec['enum']}")
+
+
+def dispatch_tool(name: str, tool_input: dict) -> Any:
+    """Validate a tool call, then execute it via the tool registry.
+
+    The orchestrator's single entry point for invoking any tool: it guarantees
+    every call is schema-checked before the implementation runs. Schema
+    violations raise ToolValidationError; the tool's own runtime failure modes
+    still come back as structured dicts.
+    """
+    validate_tool_call(name, tool_input)
+    return TOOL_REGISTRY[name](**tool_input)
+
+
 if __name__ == "__main__":
     # quick smoke test
     print("== arxiv_search('robotics vla', 2024, 2026) ==")
